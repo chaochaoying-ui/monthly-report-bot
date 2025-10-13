@@ -1,0 +1,87 @@
+========================================
+月报机器人 v1.3.1 - 快速安装指南
+========================================
+
+第1步：安装Python 3.11
+----------------------------------------
+1. 下载Python（已为你打开下载链接）：
+   https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+
+2. 双击运行安装包
+
+3. 【重要】勾选以下选项：
+   ✓ Add python.exe to PATH  <-- 必须勾选！
+   ✓ Install for all users    <-- 建议勾选
+
+4. 点击 "Install Now" 开始安装
+
+5. 等待安装完成（约1-2分钟）
+
+
+第2步：安装项目依赖
+----------------------------------------
+1. 安装完Python后，打开新的PowerShell窗口
+
+2. 运行以下命令：
+   cd F:\monthly_report_bot_link_pack\monthly_report_bot_link_pack
+   python -m pip install -r requirements_v1_1.txt
+
+3. 等待依赖包安装完成（约2-3分钟）
+
+
+第3步：启动机器人
+----------------------------------------
+双击运行：start_bot.bat
+
+或在PowerShell中运行：
+   cd F:\monthly_report_bot_link_pack\monthly_report_bot_link_pack
+   python monthly_report_bot_final_interactive.py
+
+
+========================================
+安装完成后的验证
+========================================
+
+打开PowerShell，运行：
+   python --version
+
+应显示：Python 3.11.9
+
+如果显示Python版本，说明安装成功！
+
+
+========================================
+需要帮助？
+========================================
+
+常见问题：
+
+Q: 提示"python不是内部或外部命令"
+A: 安装时未勾选"Add Python to PATH"
+   解决：重新安装Python并勾选该选项
+
+Q: pip安装很慢
+A: 使用国内镜像：
+   pip install -r requirements_v1_1.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+Q: 依赖包安装失败
+A: 逐个安装核心依赖：
+   pip install lark-oapi
+   pip install pytz
+   pip install pyyaml
+
+
+========================================
+已准备的文件
+========================================
+
+✓ start_bot.bat           - 启动脚本（一键启动）
+✓ install_environment.bat - 依赖安装脚本
+✓ 安装步骤.txt            - 本文件
+✓ README_INSTALL.md       - 详细安装文档
+
+
+Python下载链接已在浏览器中打开！
+
+
+
