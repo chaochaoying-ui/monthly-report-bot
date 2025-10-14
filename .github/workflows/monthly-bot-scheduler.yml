@@ -3,11 +3,11 @@ name: 月报机器人定时任务
 on:
   schedule:
     # 每月17-23日的指定时间执行
-    # 时区设置为上海时间 (UTC+8)
-    - cron: '30 1 17-19 * *'   # 17-19日 09:30 (上海时间)
-    - cron: '31 1 18-22 * *'   # 18-22日 09:31 (上海时间)  
-    - cron: '32 1 23 * *'      # 23日 09:32 (上海时间)
-    - cron: '0 10 23 * *'      # 23日 18:00 (上海时间)
+    # 时区设置为阿根廷布宜诺斯艾利斯时间 (UTC-3)
+    - cron: '30 12 17-19 * *'  # 17-19日 09:30 (阿根廷时间)
+    - cron: '31 12 18-22 * *'  # 18-22日 09:31 (阿根廷时间)  
+    - cron: '32 12 23 * *'     # 23日 09:32 (阿根廷时间)
+    - cron: '0 21 23 * *'      # 23日 18:00 (阿根廷时间)
   workflow_dispatch:  # 允许手动触发
     inputs:
       task_type:
@@ -51,12 +51,12 @@ jobs:
           "CHAT_ID": "${{ secrets.CHAT_ID }}",
           "WELCOME_CARD_ID": "${{ secrets.WELCOME_CARD_ID }}",
           "FILE_URL": "${{ secrets.FILE_URL }}",
-          "TIMEZONE": "${{ secrets.TIMEZONE }}"
+          "TIMEZONE": "America/Argentina/Buenos_Aires"
         }
         EOF
         
     - name: 执行任务创建 (17-19日)
-      if: github.event.schedule == '30 1 17-19 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'create_tasks')
+      if: github.event.schedule == '30 12 17-19 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'create_tasks')
       run: |
         cd monthly_report_bot_link_pack
         python -c "
@@ -80,7 +80,7 @@ jobs:
         "
         
     - name: 执行每日统计 (18-22日)
-      if: github.event.schedule == '31 1 18-22 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'daily_stats')
+      if: github.event.schedule == '31 12 18-22 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'daily_stats')
       run: |
         cd monthly_report_bot_link_pack
         python -c "
@@ -104,7 +104,7 @@ jobs:
         "
         
     - name: 执行最终提醒 (23日)
-      if: github.event.schedule == '32 1 23 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'final_reminder')
+      if: github.event.schedule == '32 12 23 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'final_reminder')
       run: |
         cd monthly_report_bot_link_pack
         python -c "
@@ -128,7 +128,7 @@ jobs:
         "
         
     - name: 发送最终统计 (23日)
-      if: github.event.schedule == '0 10 23 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'final_stats')
+      if: github.event.schedule == '0 21 23 * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'final_stats')
       run: |
         cd monthly_report_bot_link_pack
         python -c "
