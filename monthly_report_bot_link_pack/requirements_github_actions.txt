@@ -1,0 +1,10 @@
+# GitHub Actions版本的月报机器人依赖包
+# 精简版本，只包含必需依赖
+
+# 核心依赖
+requests>=2.31.0
+PyYAML>=6.0.1
+pytz>=2023.3
+
+# 安全和加密
+cryptography>=41.0.0
