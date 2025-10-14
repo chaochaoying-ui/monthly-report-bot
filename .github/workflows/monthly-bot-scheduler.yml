@@ -62,7 +62,7 @@ jobs:
         python -c "
         import sys
         sys.path.append('.')
-        from monthly_report_bot_official import create_monthly_tasks
+        from github_actions_bot import create_monthly_tasks
         import json
         import os
         
@@ -86,7 +86,7 @@ jobs:
         python -c "
         import sys
         sys.path.append('.')
-        from monthly_report_bot_official import send_daily_stats
+        from github_actions_bot import send_daily_stats
         import json
         import os
         
@@ -110,7 +110,7 @@ jobs:
         python -c "
         import sys
         sys.path.append('.')
-        from monthly_report_bot_official import send_final_reminder
+        from github_actions_bot import send_final_reminder
         import json
         import os
         
@@ -134,7 +134,7 @@ jobs:
         python -c "
         import sys
         sys.path.append('.')
-        from monthly_report_bot_official import send_final_stats
+        from github_actions_bot import send_final_stats
         import json
         import os
         
