@@ -58,7 +58,7 @@ class FeishuBot:
     
     def send_message(self, message_type: str, content: Dict) -> bool:
         """发送消息到群聊"""
-        url = f"https://open.feishu.cn/open-apis/im/v1/messages"
+        url = f"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id"
         headers = {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
@@ -67,11 +67,15 @@ class FeishuBot:
         payload = {
             "receive_id": self.chat_id,
             "msg_type": message_type,
-            "content": json.dumps(content)
+            "content": json.dumps(content, ensure_ascii=False)
         }
         
         try:
             response = requests.post(url, json=payload, headers=headers)
+            logger.info(f"API请求详情: URL={url}, Status={response.status_code}")
+            logger.info(f"请求载荷: {payload}")
+            logger.info(f"响应内容: {response.text}")
+            
             if response.status_code == 200:
                 data = response.json()
                 if data.get('code') == 0:
@@ -81,7 +85,7 @@ class FeishuBot:
                     logger.error(f"消息发送失败: {data}")
                     return False
             else:
-                logger.error(f"请求失败: {response.status_code}")
+                logger.error(f"请求失败: {response.status_code}, 响应: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"发送消息异常: {e}")
@@ -150,9 +154,43 @@ def create_task_card(task: Dict) -> Dict:
         }
     }
 
+def test_api_connection() -> bool:
+    """测试API连接"""
+    logger.info("测试API连接...")
+    
+    try:
+        bot = FeishuBot({
+            'FEISHU_APP_ID': os.getenv('FEISHU_APP_ID'),
+            'FEISHU_APP_SECRET': os.getenv('FEISHU_APP_SECRET'),
+            'FEISHU_VERIFICATION_TOKEN': os.getenv('FEISHU_VERIFICATION_TOKEN'),
+            'FEISHU_ENCRYPT_KEY': os.getenv('FEISHU_ENCRYPT_KEY', ''),
+            'CHAT_ID': os.getenv('CHAT_ID'),
+            'WELCOME_CARD_ID': os.getenv('WELCOME_CARD_ID', 'AAqInYqWzIiu6')
+        })
+        
+        # 发送测试消息
+        test_message = f"🧪 API连接测试 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        result = bot.send_text(test_message)
+        
+        if result:
+            logger.info("✅ API连接测试成功")
+            return True
+        else:
+            logger.error("❌ API连接测试失败")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ API连接测试异常: {e}")
+        return False
+
 def create_monthly_tasks() -> bool:
     """创建月度任务"""
     logger.info("开始创建月度任务...")
+    
+    # 先测试API连接
+    if not test_api_connection():
+        logger.error("API连接测试失败，终止任务创建")
+        return False
     
     # 检查是否已经创建过（基于日期判断）
     current_date = datetime.now()
@@ -176,22 +214,24 @@ def create_monthly_tasks() -> bool:
     })
     
     success_count = 0
-    for task in tasks:
+    for i, task in enumerate(tasks):
         try:
+            logger.info(f"处理任务 {i+1}/{len(tasks)}: {task['title']}")
+            
             # 创建任务卡片
             card = create_task_card(task)
             
             # 发送任务卡片
             if bot.send_card(card):
                 success_count += 1
-                logger.info(f"任务创建成功: {task['title']}")
+                logger.info(f"✅ 任务创建成功: {task['title']}")
             else:
-                logger.error(f"任务创建失败: {task['title']}")
+                logger.error(f"❌ 任务创建失败: {task['title']}")
                 
         except Exception as e:
-            logger.error(f"创建任务异常: {task['title']}, {e}")
+            logger.error(f"❌ 创建任务异常: {task['title']}, {e}")
     
-    logger.info(f"任务创建完成: {success_count}/{len(tasks)}")
+    logger.info(f"📊 任务创建完成: {success_count}/{len(tasks)}")
     return success_count > 0
 
 def send_daily_stats() -> bool:
