@@ -20,6 +20,7 @@ on:
         - daily_stats
         - final_reminder
         - final_stats
+        - help
 
 jobs:
   monthly-bot:
@@ -149,6 +150,30 @@ jobs:
         # 执行最终统计
         result = send_final_stats()
         print(f'最终统计结果: {result}')
+        "
+        
+    - name: 发送帮助信息
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.task_type == 'help'
+      run: |
+        cd monthly_report_bot_link_pack
+        python -c "
+        import sys
+        sys.path.append('.')
+        from github_actions_bot import send_help_message
+        import json
+        import os
+        
+        # 加载配置
+        with open('../config/bot_config.json', 'r') as f:
+            config = json.load(f)
+        
+        # 设置环境变量
+        for key, value in config.items():
+            os.environ[key] = value
+            
+        # 发送帮助信息
+        result = send_help_message()
+        print(f'帮助信息发送结果: {result}')
         "
         
     - name: 发送执行结果通知

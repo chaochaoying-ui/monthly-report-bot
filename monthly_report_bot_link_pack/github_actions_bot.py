@@ -111,7 +111,7 @@ def load_tasks() -> List[Dict]:
         return []
 
 def create_task_card(task: Dict) -> Dict:
-    """创建任务卡片"""
+    """创建任务卡片（简化版本，无交互按钮）"""
     return {
         "elements": [
             {
@@ -129,21 +129,11 @@ def create_task_card(task: Dict) -> Dict:
                 }
             },
             {
-                "tag": "action",
-                "actions": [
-                    {
-                        "tag": "button",
-                        "text": {
-                            "content": "✅ 已完成",
-                            "tag": "plain_text"
-                        },
-                        "type": "primary",
-                        "value": {
-                            "action": "mark_complete",
-                            "task_id": task['title']
-                        }
-                    }
-                ]
+                "tag": "div",
+                "text": {
+                    "content": "💡 请在群聊中回复「已完成」来标记任务完成",
+                    "tag": "lark_md"
+                }
             }
         ],
         "header": {
@@ -296,9 +286,44 @@ def send_final_stats() -> bool:
     stats_text += "• 总任务数: 24\n"
     stats_text += "• 完成情况: 待统计\n"
     stats_text += "• 完成率: 待计算\n\n"
+    stats_text += "💡 **使用说明**:\n"
+    stats_text += "• 回复「已完成」标记任务完成\n"
+    stats_text += "• 回复「我的任务」查看个人任务\n"
+    stats_text += "• 回复「帮助」查看所有命令\n\n"
     stats_text += "感谢各位负责人的配合！"
     
     return bot.send_text(stats_text)
+
+def send_help_message() -> bool:
+    """发送帮助信息"""
+    logger.info("发送帮助信息...")
+    
+    bot = FeishuBot({
+        'FEISHU_APP_ID': os.getenv('FEISHU_APP_ID'),
+        'FEISHU_APP_SECRET': os.getenv('FEISHU_APP_SECRET'),
+        'FEISHU_VERIFICATION_TOKEN': os.getenv('FEISHU_VERIFICATION_TOKEN'),
+        'FEISHU_ENCRYPT_KEY': os.getenv('FEISHU_ENCRYPT_KEY', ''),
+        'CHAT_ID': os.getenv('CHAT_ID'),
+        'WELCOME_CARD_ID': os.getenv('WELCOME_CARD_ID', 'AAqInYqWzIiu6')
+    })
+    
+    help_text = "🤖 **月报机器人使用说明**\n\n"
+    help_text += "📋 **可用命令**:\n"
+    help_text += "• `已完成` - 标记任务完成\n"
+    help_text += "• `我的任务` - 查看个人任务列表\n"
+    help_text += "• `帮助` - 显示此帮助信息\n"
+    help_text += "• `统计` - 查看任务完成统计\n\n"
+    help_text += "💡 **注意事项**:\n"
+    help_text += "• 请在任务卡片下方回复相应命令\n"
+    help_text += "• 机器人会定期检查和统计任务完成情况\n"
+    help_text += "• 如有问题请联系管理员\n\n"
+    help_text += "📅 **自动执行时间**:\n"
+    help_text += "• 每月17-19日 09:30 创建任务\n"
+    help_text += "• 每月18-22日 09:31 发送统计\n"
+    help_text += "• 每月23日 09:32 发送提醒\n"
+    help_text += "• 每月23日 18:00 发送最终统计"
+    
+    return bot.send_text(help_text)
 
 if __name__ == "__main__":
     # 从命令行参数或环境变量确定要执行的任务
