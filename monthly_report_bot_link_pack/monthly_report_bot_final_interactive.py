@@ -116,7 +116,7 @@ lark_client = None
 def validate_env_vars() -> List[str]:
     """验证环境变量"""
     errors = []
-    
+
     if not APP_ID:
         errors.append("APP_ID 未设置")
     if not APP_SECRET:
@@ -125,7 +125,7 @@ def validate_env_vars() -> List[str]:
         errors.append("CHAT_ID 未设置")
     if not FILE_URL:
         errors.append("FILE_URL 未设置")
-    
+
     return errors
 
 # ---------------------- 飞书SDK客户端初始化 ----------------------
@@ -133,16 +133,16 @@ def validate_env_vars() -> List[str]:
 def init_lark_client() -> bool:
     """初始化飞书SDK客户端"""
     global lark_client
-    
+
     try:
         lark_client = lark.Client.builder() \
             .app_id(APP_ID) \
             .app_secret(APP_SECRET) \
             .build()
-        
+
         logger.info("飞书SDK客户端初始化成功")
         return True
-        
+
     except Exception as e:
         logger.error("飞书SDK客户端初始化失败: %s", e)
         return False
@@ -189,13 +189,13 @@ async def check_task_status_from_feishu(task_id: str) -> bool:
         if not lark_client:
             logger.warning("飞书客户端未初始化，无法检查任务状态")
             return False
-        
+
         request = GetTaskRequest.builder() \
             .task_guid(task_id) \
             .build()
-        
+
         response = await lark_client.task.v2.task.aget(request)
-        
+
         if response.success():
             task = response.data.task
             is_completed = task.complete == 2
@@ -204,7 +204,7 @@ async def check_task_status_from_feishu(task_id: str) -> bool:
         else:
             logger.warning("查询任务状态失败: %s, code: %s", task_id, response.code)
             return False
-            
+
     except Exception as e:
         logger.error("检查任务状态异常: %s, task_id: %s", e, task_id)
         return False
@@ -214,7 +214,7 @@ def update_task_completion(task_id: str, task_title: str, assignees: List[str], 
     try:
         stats = load_task_stats()
         current_month = datetime.now(TZ).strftime("%Y-%m")
-        
+
         if stats["current_month"] != current_month:
             stats = {
                 "current_month": current_month,
@@ -224,7 +224,7 @@ def update_task_completion(task_id: str, task_title: str, assignees: List[str], 
                 "completion_rate": 0.0,
                 "last_update": datetime.now(TZ).isoformat()
             }
-        
+
         if task_id not in stats["tasks"]:
             stats["tasks"][task_id] = {
                 "title": task_title,
@@ -234,18 +234,18 @@ def update_task_completion(task_id: str, task_title: str, assignees: List[str], 
                 "completed_at": None
             }
             stats["total_tasks"] += 1
-        
+
         if completed and not stats["tasks"][task_id]["completed"]:
             stats["tasks"][task_id]["completed"] = True
             stats["tasks"][task_id]["completed_at"] = datetime.now(TZ).isoformat()
             stats["completed_tasks"] += 1
-        
+
         if stats["total_tasks"] > 0:
             stats["completion_rate"] = round(stats["completed_tasks"] / stats["total_tasks"] * 100, 2)
-        
+
         save_task_stats(stats)
         logger.info("任务完成状态更新: %s -> %s", task_title, "已完成" if completed else "未完成")
-        
+
     except Exception as e:
         logger.error("更新任务完成状态失败: %s", e)
 
@@ -256,10 +256,10 @@ async def sync_task_completion_status() -> None:
         if not stats["tasks"]:
             logger.info("没有任务需要同步状态")
             return
-        
+
         logger.info("开始同步任务完成状态...")
         updated_count = 0
-        
+
         for task_id, task_info in stats["tasks"].items():
             try:
                 is_completed = await check_task_status_from_feishu(task_id)
@@ -278,16 +278,16 @@ async def sync_task_completion_status() -> None:
                     updated_count += 1
             except Exception as e:
                 logger.error("同步任务状态失败: %s, task_id: %s", e, task_id)
-        
+
         if stats["total_tasks"] > 0:
             stats["completion_rate"] = round(stats["completed_tasks"] / stats["total_tasks"] * 100, 2)
-        
+
         if updated_count > 0:
             save_task_stats(stats)
             logger.info("任务状态同步完成，更新了 %d 个任务", updated_count)
         else:
             logger.info("任务状态同步完成，无需更新")
-            
+
     except Exception as e:
         logger.error("同步任务完成状态失败: %s", e)
 
@@ -296,7 +296,7 @@ def get_task_completion_stats() -> Dict[str, Any]:
     try:
         stats = load_task_stats()
         current_month = datetime.now(TZ).strftime("%Y-%m")
-        
+
         if stats["current_month"] != current_month:
             return {
                 "current_month": current_month,
@@ -306,15 +306,15 @@ def get_task_completion_stats() -> Dict[str, Any]:
                 "pending_tasks": 0,
                 "pending_assignees": []
             }
-        
+
         pending_tasks = stats["total_tasks"] - stats["completed_tasks"]
-        
+
         pending_assignees = []
         for task_id, task_info in stats["tasks"].items():
             if not task_info["completed"]:
                 pending_assignees.extend(task_info["assignees"])
         pending_assignees = list(set(pending_assignees))
-        
+
         return {
             "current_month": stats["current_month"],
             "total_tasks": stats["total_tasks"],
@@ -323,7 +323,7 @@ def get_task_completion_stats() -> Dict[str, Any]:
             "pending_tasks": pending_tasks,
             "pending_assignees": pending_assignees
         }
-        
+
     except Exception as e:
         logger.error("获取任务完成统计失败: %s", e)
         return {
@@ -340,7 +340,7 @@ def get_pending_tasks_detail() -> List[Dict[str, Any]]:
     try:
         stats = load_task_stats()
         pending_tasks = []
-        
+
         for task_id, task_info in stats["tasks"].items():
             if not task_info["completed"]:
                 pending_tasks.append({
@@ -348,9 +348,9 @@ def get_pending_tasks_detail() -> List[Dict[str, Any]]:
                     "title": task_info["title"],
                     "assignees": task_info["assignees"]
                 })
-        
+
         return pending_tasks
-        
+
     except Exception as e:
         logger.error("获取未完成任务详情失败: %s", e)
         return []
@@ -398,12 +398,12 @@ def format_assignees_display(assignees: List[str]) -> str:
     """格式化负责人显示"""
     if not assignees:
         return "**待分配**"
-    
+
     display_names = []
     for assignee in assignees:
         display_name = get_user_display_name(assignee)
         display_names.append(f"<at user_id=\"{assignee}\">{display_name}</at>")
-    
+
     return " ".join(display_names)
 
 # ---------------------- 卡片构建函数 ----------------------
@@ -426,7 +426,7 @@ def build_welcome_card() -> Dict:
 def build_task_creation_card() -> Dict:
     """构建任务创建卡片"""
     stats = get_task_completion_stats()
-    
+
     all_tasks = []
     task_stats = load_task_stats()
     for task_id, task_info in task_stats["tasks"].items():
@@ -434,7 +434,7 @@ def build_task_creation_card() -> Dict:
             "title": task_info["title"],
             "assignees": task_info["assignees"]
         })
-    
+
     task_list_text = ""
     for i, task in enumerate(all_tasks, 1):
         assignee_mentions = ""
@@ -443,9 +443,9 @@ def build_task_creation_card() -> Dict:
                 assignee_mentions += f"<at user_id=\"{assignee}\"></at> "
         else:
             assignee_mentions = "**待分配**"
-        
+
         task_list_text += f"{i:2d}. **{task['title']}**\n    👤 负责人: {assignee_mentions}\n\n"
-    
+
     return {
         "config": {
             "wide_screen_mode": True
@@ -486,14 +486,14 @@ def build_daily_reminder_card() -> Dict:
     """构建每日提醒卡片"""
     stats = get_task_completion_stats()
     pending_tasks = get_pending_tasks_detail()
-    
+
     mention_text = ""
     if stats['pending_assignees']:
         mention_text = "\n\n**未完成任务的负责人：**\n"
         for assignee in stats['pending_assignees']:
             display_name = get_user_display_name(assignee)
             mention_text += f"<at user_id=\"{assignee}\">{display_name}</at> "
-    
+
     task_list = ""
     if pending_tasks:
         task_list = "\n\n**未完成任务详情：**\n"
@@ -502,7 +502,7 @@ def build_daily_reminder_card() -> Dict:
             task_list += f"{i}. **{task['title']}**\n    👤 负责人: {assignee_mentions}\n\n"
         if len(pending_tasks) > 8:
             task_list += f"... 还有 {len(pending_tasks) - 8} 个任务未完成\n"
-    
+
     return {
         "config": {
             "wide_screen_mode": True
@@ -543,21 +543,21 @@ def build_final_reminder_card() -> Dict:
     """构建最终催办卡片"""
     stats = get_task_completion_stats()
     pending_tasks = get_pending_tasks_detail()
-    
+
     mention_text = ""
     if stats['pending_assignees']:
         mention_text = "\n\n**⚠️ 紧急催办 - 未完成任务的负责人：**\n"
         for assignee in stats['pending_assignees']:
             display_name = get_user_display_name(assignee)
             mention_text += f"<at user_id=\"{assignee}\">{display_name}</at> "
-    
+
     task_list = ""
     if pending_tasks:
         task_list = "\n\n**未完成任务详情：**\n"
         for i, task in enumerate(pending_tasks, 1):
             assignee_mentions = format_assignees_display(task["assignees"])
             task_list += f"{i}. **{task['title']}**\n    👤 负责人: {assignee_mentions}\n\n"
-    
+
     return {
         "config": {
             "wide_screen_mode": True
@@ -597,10 +597,10 @@ def build_final_reminder_card() -> Dict:
 def build_final_stats_card() -> Dict:
     """构建最终统计卡片"""
     stats = get_task_completion_stats()
-    
+
     progress_width = min(int(stats['completion_rate'] / 10), 10)
     progress_bar = "█" * progress_width + "░" * (10 - progress_width)
-    
+
     if stats['completion_rate'] >= 100:
         summary = "🎉 **恭喜！所有任务已完成！**"
     elif stats['completion_rate'] >= 80:
@@ -609,7 +609,7 @@ def build_final_stats_card() -> Dict:
         summary = "⚠️ **任务完成情况一般，需要关注！**"
     else:
         summary = "❌ **任务完成情况较差，需要改进！**"
-    
+
     # 尝试生成图表
     chart_info = ""
     if chart_generator and stats.get('total_tasks', 0) > 0:
@@ -619,7 +619,7 @@ def build_final_stats_card() -> Dict:
                 chart_info = f"\n\n📊 **可视化统计**: 已生成综合仪表板图表"
         except Exception as e:
             logger.error(f"生成统计卡片图表失败: {e}")
-    
+
     return {
         "config": {
             "wide_screen_mode": True
@@ -665,6 +665,186 @@ def build_final_stats_card() -> Dict:
         ]
     }
 
+async def build_daily_stats_card_with_chart() -> Dict:
+    """构建带图表的每日统计卡片"""
+    try:
+        # 同步任务状态
+        await sync_task_completion_status()
+
+        # 获取统计数据
+        stats = get_task_completion_stats()
+        task_stats_full = load_task_stats()
+
+        # 生成图表
+        chart_path = None
+        image_key = None
+        if chart_generator and stats.get('total_tasks', 0) > 0:
+            try:
+                chart_path = chart_generator.generate_comprehensive_dashboard(task_stats_full)
+                if chart_path and os.path.exists(chart_path):
+                    # 上传图表到飞书
+                    image_key = await upload_image(chart_path)
+                    logger.info("图表已生成并上传: %s", chart_path)
+            except Exception as e:
+                logger.error("生成或上传图表失败: %s", e)
+
+        # 构建进度条
+        progress_width = min(int(stats['completion_rate'] / 10), 10)
+        progress_bar = "█" * progress_width + "░" * (10 - progress_width)
+
+        # 评估完成情况
+        if stats['completion_rate'] >= 100:
+            summary = "🎉 **恭喜！所有任务已完成！**"
+            template_color = "green"
+        elif stats['completion_rate'] >= 80:
+            summary = "✅ **任务完成情况良好！**"
+            template_color = "blue"
+        elif stats['completion_rate'] >= 60:
+            summary = "⚠️ **任务完成情况一般，需要关注！**"
+            template_color = "orange"
+        else:
+            summary = "❌ **任务完成情况较差，需要改进！**"
+            template_color = "red"
+
+        # 构建卡片元素
+        elements = []
+
+        # 添加统计文本
+        content_text = (
+            f"**{stats['current_month']} 月度报告进度统计**\n\n"
+            f"{summary}\n\n"
+            f"📈 **完成情况**:\n"
+            f"• 总任务数: {stats['total_tasks']}\n"
+            f"• 已完成: {stats['completed_tasks']}\n"
+            f"• 待完成: {stats['pending_tasks']}\n"
+            f"• 完成率: {stats['completion_rate']}%\n\n"
+            f"📊 **进度条**:\n"
+            f"`{progress_bar}` {stats['completion_rate']}%\n\n"
+            f"⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+        elements.append({
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": content_text
+            }
+        })
+
+        # 添加图表图片（如果成功上传）
+        if image_key:
+            elements.append({
+                "tag": "img",
+                "img_key": image_key,
+                "alt": {
+                    "tag": "plain_text",
+                    "content": "任务统计图表"
+                }
+            })
+            elements.append({
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": "📊 **上图为综合统计仪表板**，包含任务完成情况、完成率、任务数量对比等多维度分析"
+                }
+            })
+
+        # 添加按钮
+        elements.append({
+            "tag": "action",
+            "actions": [
+                {
+                    "tag": "button",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "查看详情"
+                    },
+                    "type": "primary",
+                    "url": FILE_URL
+                }
+            ]
+        })
+
+        # 构建完整卡片
+        card = {
+            "config": {
+                "wide_screen_mode": True
+            },
+            "header": {
+                "title": {
+                    "tag": "plain_text",
+                    "content": "📊 每日任务统计报告"
+                },
+                "template": template_color
+            },
+            "elements": elements
+        }
+
+        return card
+
+    except Exception as e:
+        logger.error("构建每日统计卡片失败: %s", e)
+        # 返回简化版卡片
+        return {
+            "config": {
+                "wide_screen_mode": True
+            },
+            "header": {
+                "title": {
+                    "tag": "plain_text",
+                    "content": "📊 每日任务统计报告"
+                },
+                "template": "blue"
+            },
+            "elements": [
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": "统计卡片生成失败，请稍后重试"
+                    }
+                }
+            ]
+        }
+
+# ---------------------- 图片上传函数 ----------------------
+
+async def upload_image(image_path: str) -> Optional[str]:
+    """上传图片到飞书，返回image_key"""
+    try:
+        from lark_oapi.api.im.v1 import CreateImageRequest
+
+        if not os.path.exists(image_path):
+            logger.error("图片文件不存在: %s", image_path)
+            return None
+
+        # 读取图片文件
+        with open(image_path, 'rb') as f:
+            image_data = f.read()
+
+        # 构建请求
+        request = CreateImageRequest.builder() \
+            .request_body(CreateImageRequestBody.builder()
+                        .image_type("message")
+                        .image(image_data)
+                        .build()) \
+            .build()
+
+        # 上传图片
+        response = await lark_client.im.v1.image.acreate(request)
+
+        if response.success():
+            image_key = response.data.image_key
+            logger.info("图片上传成功, image_key: %s", image_key)
+            return image_key
+        else:
+            logger.error("图片上传失败, code: %s, msg: %s", response.code, response.msg)
+            return None
+
+    except Exception as e:
+        logger.error("上传图片异常: %s", e)
+        return None
+
 # ---------------------- 消息发送函数 ----------------------
 
 async def send_card_to_chat(card: Dict) -> bool:
@@ -678,16 +858,16 @@ async def send_card_to_chat(card: Dict) -> bool:
                         .content(json.dumps(card, ensure_ascii=False))
                         .build()) \
             .build()
-        
+
         response = await lark_client.im.v1.message.acreate(request)
-        
+
         if response.success():
             logger.info("卡片发送成功")
             return True
         else:
             logger.error("卡片发送失败, code: %s, msg: %s", response.code, response.msg)
             return False
-            
+
     except Exception as e:
         logger.error("发送卡片异常: %s", e)
         return False
@@ -703,16 +883,16 @@ async def send_text_to_chat(text: str) -> bool:
                         .content(json.dumps({"text": text}, ensure_ascii=False))
                         .build()) \
             .build()
-        
+
         response = await lark_client.im.v1.message.acreate(request)
-        
+
         if response.success():
             logger.info("文本消息发送成功: %s", text)
             return True
         else:
             logger.error("文本消息发送失败, code: %s, msg: %s", response.code, response.msg)
             return False
-            
+
     except Exception as e:
         logger.error("发送文本消息异常: %s", e)
         return False
@@ -725,7 +905,7 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
         if not lark_client:
             logger.error("客户端未初始化，无法发送消息")
             return False
-        
+
         if msg_type == "text":
             body = ReplyMessageRequestBody.builder() \
                 .msg_type("text") \
@@ -736,12 +916,12 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
                 .msg_type("interactive") \
                 .content(json.dumps(content, ensure_ascii=False)) \
                 .build()
-        
+
         request = ReplyMessageRequest.builder() \
             .message_id(message_id) \
             .request_body(body) \
             .build()
-        
+
         response = await lark_client.im.v1.message.areply(request)
         if response.code == 0 or getattr(response, "success", lambda: False)():
             logger.info("消息回复成功: %s", str(content)[:50])
@@ -870,18 +1050,18 @@ def generate_chart_response() -> str:
         current_month = datetime.now(TZ).strftime("%Y-%m")
         if not created.get(current_month, False):
             return "当前没有任务，无法生成图表"
-        
+
         stats = get_task_completion_stats()
         if stats.get('total_tasks', 0) == 0:
             return "当前没有任务，无法生成图表"
-        
+
         # 检查图表生成器是否可用
         if chart_generator is None:
             return "图表功能暂不可用，请检查依赖库安装"
-        
+
         # 生成图表
         chart_path = chart_generator.generate_comprehensive_dashboard(stats)
-        
+
         if chart_path and os.path.exists(chart_path):
             # 返回图表信息
             return (
@@ -896,7 +1076,7 @@ def generate_chart_response() -> str:
             )
         else:
             return "图表生成失败，请稍后重试"
-            
+
     except Exception as e:
         logger.error(f"生成图表响应失败: {e}")
         return "图表生成失败，请稍后重试"
@@ -914,12 +1094,12 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
                 content = {}
         elif isinstance(content_raw, dict):
             content = content_raw
-        
+
         text = (content.get("text", "") or "").strip()
         message_id = message.get("message_id", "")
         if not text or not message_id:
             return True
-        
+
         normalized = _sanitize_command_text(text)
 
         # 未完成/谁没交 → 若当月未创建任务则直接回复“当前没有任务”
@@ -1017,12 +1197,12 @@ async def _run_official_ws(loop: asyncio.AbstractEventLoop) -> None:
     if not (lark and hasattr(lark, "ws")):
         logger.warning("官方WS不可用，跳过WS启动")
         return
-    
+
     def _start_ws():
         try:
             # 构建事件分发器
             handler_builder = lark.EventDispatcherHandler.builder("", "")
-            
+
             def _on_p2_message(data):
                 try:
                     # 仅当事件循环仍在运行时才调度协程，避免在关闭后创建未等待的协程
@@ -1041,16 +1221,16 @@ async def _run_official_ws(loop: asyncio.AbstractEventLoop) -> None:
                     fut.add_done_callback(_log_future_result)
                 except Exception as ex:
                     logger.error("转发P2消息事件失败: %s", ex)
-            
+
             handler = handler_builder.register_p2_im_message_receive_v1(_on_p2_message).build()
             logger.info("已注册官方WS消息事件处理器")
-            
+
             client = lark.ws.Client(APP_ID, APP_SECRET, event_handler=handler, log_level=lark.LogLevel.INFO)
             logger.info("开始建立官方WS长连接...")
             client.start()
         except Exception as e:
             logger.error("官方WS启动失败: %s", e)
-    
+
     # 在后台线程运行阻塞的 WS 客户端
     await asyncio.to_thread(_start_ws)
 
@@ -1062,7 +1242,7 @@ def should_create_tasks(now: Optional[datetime] = None) -> bool:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
-    
+
     return 17 <= current_day <= 19 and current_time == "09:30"
 
 def should_send_daily_reminder(now: Optional[datetime] = None) -> bool:
@@ -1071,7 +1251,7 @@ def should_send_daily_reminder(now: Optional[datetime] = None) -> bool:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
-    
+
     return 18 <= current_day <= 22 and current_time == "10:00"
 
 def should_send_final_reminder(now: Optional[datetime] = None) -> bool:
@@ -1080,7 +1260,7 @@ def should_send_final_reminder(now: Optional[datetime] = None) -> bool:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
-    
+
     return current_day == 23 and current_time == "09:00"
 
 def should_send_final_stats(now: Optional[datetime] = None) -> bool:
@@ -1089,21 +1269,29 @@ def should_send_final_stats(now: Optional[datetime] = None) -> bool:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
-    
+
     return current_day == 23 and current_time == "18:00"
+
+def should_send_daily_stats(now: Optional[datetime] = None) -> bool:
+    """判断是否应该发送每日统计（每天17:30）"""
+    if now is None:
+        now = datetime.now(TZ)
+    current_time = now.strftime("%H:%M")
+
+    return current_time == "17:30"
 
 # ---------------------- 主程序逻辑 ----------------------
 
 async def main_loop():
     """主循环：保留原定时能力"""
     logger.info("启动月报机器人主循环（交互增强版）")
-    
+
     while True:
         try:
             now = datetime.now(TZ)
             now_str = now.strftime("%Y-%m-%d %H:%M:%S")
             logger.info("当前时间: %s", now_str)
-            
+
             if should_create_tasks(now):
                 logger.info("执行任务创建...")
                 success = await create_tasks()
@@ -1112,31 +1300,40 @@ async def main_loop():
                     await send_card_to_chat(card)
                 else:
                     await send_text_to_chat("❌ 任务创建失败，请检查配置")
-            
+
             elif should_send_daily_reminder(now):
                 logger.info("发送每日提醒...")
                 await sync_task_completion_status()
                 card = build_daily_reminder_card()
                 await send_card_to_chat(card)
-            
+
             elif should_send_final_reminder(now):
                 logger.info("发送最终催办...")
                 await sync_task_completion_status()
                 card = build_final_reminder_card()
                 await send_card_to_chat(card)
-            
+
             elif should_send_final_stats(now):
                 logger.info("发送最终统计...")
                 await sync_task_completion_status()
                 card = build_final_stats_card()
                 await send_card_to_chat(card)
-            
+
+            elif should_send_daily_stats(now):
+                logger.info("发送每日统计（17:30）...")
+                card = await build_daily_stats_card_with_chart()
+                success = await send_card_to_chat(card)
+                if success:
+                    logger.info("✅ 每日统计卡片发送成功")
+                else:
+                    logger.error("❌ 每日统计卡片发送失败")
+
             elif now.minute == 0:
                 logger.info("执行定时任务状态同步...")
                 await sync_task_completion_status()
-            
+
             await asyncio.sleep(60)
-            
+
         except Exception as e:
             logger.error("主循环异常: %s", e)
             await asyncio.sleep(60)
@@ -1146,15 +1343,15 @@ async def create_tasks() -> bool:
     try:
         created_tasks = load_created_tasks()
         current_month = datetime.now(TZ).strftime("%Y-%m")
-        
+
         if created_tasks.get(current_month, False):
             logger.info("本月任务已创建，跳过")
             return True
-        
+
         if not os.path.exists(TASKS_FILE):
             logger.error("任务配置文件不存在: %s", TASKS_FILE)
             return False
-        
+
         with open(TASKS_FILE, 'r', encoding='utf-8') as f:
             tasks_config = yaml.safe_load(f)
 
@@ -1185,7 +1382,7 @@ async def create_tasks() -> bool:
                 success_count += 1
             except Exception as e:
                 logger.error("创建任务异常: %s, 任务: %s", e, task_config.get('title', 'Unknown'))
-        
+
         if success_count > 0:
             created_tasks[current_month] = True
             save_created_tasks(created_tasks)
@@ -1194,7 +1391,7 @@ async def create_tasks() -> bool:
         else:
             logger.error("没有成功创建任何任务")
             return False
-            
+
     except Exception as e:
         logger.error("创建任务异常: %s", e)
         return False
@@ -1226,22 +1423,22 @@ async def main():
     if errors:
         logger.error("环境变量验证失败: %s", errors)
         return
-    
+
     logger.info("环境变量验证通过")
     logger.info("APP_ID: %s", APP_ID)
     logger.info("CHAT_ID: %s", CHAT_ID)
     logger.info("WELCOME_CARD_ID: %s", WELCOME_CARD_ID)
     logger.info("SDK版本: lark-oapi")
-    
+
     if not init_lark_client():
         logger.error("飞书SDK客户端初始化失败，程序退出")
         return
-    
+
     # 发送启动通知
     await send_text_to_chat("🚀 月报机器人最终版（交互增强）已启动，支持 Echo 回声与定时任务...")
-    
+
     tasks = []
-    
+
     if USE_OFFICIAL_WS and (lark and hasattr(lark, "ws")):
         # 官方WS（可用则优先）
         logger.info("尝试启动官方WS长连接...")
@@ -1255,10 +1452,10 @@ async def main():
         handler.register_event_handler("im.message.receive_v1", handle_message_event)
         logger.info("已注册消息事件处理器（Echo）")
         tasks.append(asyncio.create_task(handler.connect_to_feishu()))
-    
+
     # 定时循环
     tasks.append(asyncio.create_task(main_loop()))
-    
+
     await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
