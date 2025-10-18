@@ -19,6 +19,19 @@ import yaml, pytz
 import asyncio
 from datetime import datetime, timedelta
 
+# 加载 .env 文件
+try:
+    from dotenv import load_dotenv
+    # 尝试从当前目录和脚本目录加载 .env 文件
+    load_dotenv()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_file = os.path.join(script_dir, '.env')
+    if os.path.exists(env_file):
+        load_dotenv(env_file)
+except ImportError:
+    # 如果没有安装 python-dotenv，跳过（适用于通过 systemd 环境变量传递的情况）
+    pass
+
 # 导入飞书官方SDK
 try:
     import lark_oapi as lark

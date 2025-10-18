@@ -80,12 +80,13 @@ MISSING_DEPS=()
 $PYTHON_BIN -c "import websockets" 2>/dev/null || MISSING_DEPS+=("websockets")
 $PYTHON_BIN -c "import requests" 2>/dev/null || MISSING_DEPS+=("requests")
 $PYTHON_BIN -c "import yaml" 2>/dev/null || MISSING_DEPS+=("PyYAML")
+$PYTHON_BIN -c "import dotenv" 2>/dev/null || MISSING_DEPS+=("python-dotenv")
 
 if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     log_warning "缺少依赖: ${MISSING_DEPS[*]}"
     log_info "正在安装依赖..."
     pip install --upgrade pip
-    pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 || {
+    pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 python-dotenv>=1.0.0 || {
         log_error "依赖安装失败"
         exit 1
     }
