@@ -2,8 +2,6 @@
 # GCP Compute Engine 自动部署脚本
 # 用途：在GCP虚拟机上自动部署月报机器人
 
-set -e  # 遇到错误立即退出
-
 echo "=========================================="
 echo "月报机器人 GCP 部署脚本"
 echo "=========================================="
@@ -20,8 +18,15 @@ if [ "$EUID" -eq 0 ]; then
    exit 1
 fi
 
-echo -e "${GREEN}步骤 1/8: 更新系统...${NC}"
-sudo apt update && sudo apt upgrade -y
+echo -e "${GREEN}步骤 1/8: 更新系统包列表...${NC}"
+# 等待 apt 锁释放
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+    echo "等待其他apt进程完成..."
+    sleep 2
+done
+sudo apt update -y || {
+    echo -e "${YELLOW}apt update失败，继续执行...${NC}"
+}
 
 echo -e "${GREEN}步骤 2/8: 安装Python 3.11和依赖...${NC}"
 sudo apt install -y python3.11 python3.11-venv python3-pip git wget curl
@@ -45,7 +50,11 @@ source venv/bin/activate
 
 echo -e "${GREEN}步骤 5/8: 安装Python依赖...${NC}"
 pip install --upgrade pip
-pip install -r requirements_v1_1.txt
+# 安装核心依赖（避免安装不必要的大型库）
+pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 || {
+    echo -e "${RED}依赖安装失败${NC}"
+    exit 1
+}
 
 echo -e "${GREEN}步骤 6/8: 配置环境变量...${NC}"
 if [ ! -f ".env" ]; then
@@ -103,6 +112,9 @@ echo -e "${GREEN}步骤 8/8: 启动服务...${NC}"
 # 重新加载systemd
 sudo systemctl daemon-reload
 
+# 停止旧服务（如果存在）
+sudo systemctl stop monthly-report-bot 2>/dev/null || true
+
 # 启动服务
 sudo systemctl start monthly-report-bot
 
@@ -110,7 +122,7 @@ sudo systemctl start monthly-report-bot
 sudo systemctl enable monthly-report-bot
 
 # 等待几秒让服务启动
-sleep 3
+sleep 5
 
 # 检查服务状态
 if sudo systemctl is-active --quiet monthly-report-bot; then
@@ -119,22 +131,40 @@ if sudo systemctl is-active --quiet monthly-report-bot; then
     echo "==========================================${NC}"
     echo ""
     echo "服务状态："
-    sudo systemctl status monthly-report-bot --no-pager
+    sudo systemctl status monthly-report-bot --no-pager -l
     echo ""
-    echo "常用命令："
+    echo -e "${GREEN}查看实时日志：${NC}"
+    echo "  sudo tail -f /var/log/monthly-report-bot.log"
+    echo ""
+    echo -e "${GREEN}查看错误日志：${NC}"
+    echo "  sudo tail -f /var/log/monthly-report-bot-error.log"
+    echo ""
+    echo -e "${GREEN}其他命令：${NC}"
     echo "  查看状态: sudo systemctl status monthly-report-bot"
-    echo "  查看日志: sudo tail -f /var/log/monthly-report-bot.log"
-    echo "  查看错误: sudo tail -f /var/log/monthly-report-bot-error.log"
+    echo "  查看systemd日志: sudo journalctl -u monthly-report-bot -f"
     echo "  重启服务: sudo systemctl restart monthly-report-bot"
     echo "  停止服务: sudo systemctl stop monthly-report-bot"
     echo ""
     echo -e "${GREEN}机器人已在后台运行，现在可以在飞书群聊中@机器人测试！${NC}"
+    echo ""
+    echo -e "${YELLOW}正在显示最近的日志（按Ctrl+C退出）...${NC}"
+    sleep 2
+    sudo tail -n 20 /var/log/monthly-report-bot.log
 else
     echo -e "${RED}=========================================="
     echo "❌ 服务启动失败"
     echo "==========================================${NC}"
-    echo "请查看错误日志："
-    echo "  sudo journalctl -u monthly-report-bot -n 50"
+    echo ""
+    echo -e "${YELLOW}systemd日志：${NC}"
+    sudo journalctl -u monthly-report-bot -n 30 --no-pager
+    echo ""
+    echo -e "${YELLOW}错误日志文件：${NC}"
+    sudo tail -n 20 /var/log/monthly-report-bot-error.log 2>/dev/null || echo "错误日志文件为空或不存在"
+    echo ""
+    echo -e "${YELLOW}请尝试手动运行以下命令排查问题：${NC}"
+    echo "  cd ~/monthly-report-bot/monthly_report_bot_link_pack"
+    echo "  source venv/bin/activate"
+    echo "  python monthly_report_bot_final_interactive.py"
     exit 1
 fi
 

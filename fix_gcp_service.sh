@@ -48,20 +48,51 @@ if [ ! -f "$FULL_SCRIPT_PATH" ]; then
 fi
 log_info "主程序文件存在: $FULL_SCRIPT_PATH"
 
-# 3. 检查虚拟环境
+# 3. 检查并修复虚拟环境
 log_info "步骤 3/6: 检查虚拟环境..."
 VENV_PATH="$PROJECT_DIR/$BOT_APP_DIR/$VENV_DIR"
-if [ ! -d "$VENV_PATH" ]; then
-    log_error "虚拟环境不存在: $VENV_PATH"
-    exit 1
-fi
 PYTHON_BIN="$VENV_PATH/bin/python3"
+
+if [ ! -d "$VENV_PATH" ]; then
+    log_warning "虚拟环境不存在，正在创建..."
+    cd "$PROJECT_DIR/$BOT_APP_DIR" || exit 1
+    python3.11 -m venv "$VENV_DIR" || {
+        log_error "创建虚拟环境失败"
+        exit 1
+    }
+fi
+
 if [ ! -f "$PYTHON_BIN" ]; then
     log_error "Python 解释器不存在: $PYTHON_BIN"
     exit 1
 fi
+
 log_info "虚拟环境存在: $VENV_PATH"
 log_info "Python 版本: $($PYTHON_BIN --version)"
+
+# 检查并安装依赖
+log_info "检查 Python 依赖..."
+cd "$PROJECT_DIR/$BOT_APP_DIR" || exit 1
+source "$VENV_PATH/bin/activate"
+
+# 检查关键依赖
+MISSING_DEPS=()
+$PYTHON_BIN -c "import websockets" 2>/dev/null || MISSING_DEPS+=("websockets")
+$PYTHON_BIN -c "import requests" 2>/dev/null || MISSING_DEPS+=("requests")
+$PYTHON_BIN -c "import yaml" 2>/dev/null || MISSING_DEPS+=("PyYAML")
+
+if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+    log_warning "缺少依赖: ${MISSING_DEPS[*]}"
+    log_info "正在安装依赖..."
+    pip install --upgrade pip
+    pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 || {
+        log_error "依赖安装失败"
+        exit 1
+    }
+    log_info "依赖安装完成"
+else
+    log_info "所有依赖已安装"
+fi
 
 # 4. 检查 .env 文件
 log_info "步骤 4/6: 检查 .env 文件..."
