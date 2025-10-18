@@ -94,14 +94,34 @@ else
     log_info "所有依赖已安装"
 fi
 
-# 4. 检查 .env 文件
-log_info "步骤 4/6: 检查 .env 文件..."
+# 4. 检查并修复 .env 文件
+log_info "步骤 4/6: 检查并修复 .env 文件..."
 ENV_FILE="$PROJECT_DIR/$BOT_APP_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
+
+# 检查 .env 文件中的变量名是否正确
+if [ -f "$ENV_FILE" ]; then
+    if grep -q "FEISHU_APP_ID" "$ENV_FILE"; then
+        log_warning ".env 文件使用了错误的变量名（FEISHU_APP_ID），正在修复..."
+        # 重新创建 .env 文件
+        cd "$PROJECT_DIR/$BOT_APP_DIR" || exit 1
+        cat > .env << 'EOF'
+APP_ID=cli_a8fd44a9453cd00c
+APP_SECRET=jsVoFWgaaw05en6418h7xbhV5oXxAwIm
+CHAT_ID=oc_e4218b232326ea81a077b65c4cd16ce5
+WELCOME_CARD_ID=AAqInYqWzIiu6
+FILE_URL=https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+VERIFICATION_TOKEN=v_01J6RE0Q4VEcCQ0hFg1RbdLT
+TZ=America/Argentina/Buenos_Aires
+PYTHONIOENCODING=utf-8
+EOF
+        log_info ".env 文件已修复（使用正确的变量名：APP_ID）"
+    else
+        log_info ".env 文件存在且变量名正确"
+    fi
+else
     log_error ".env 文件不存在: $ENV_FILE"
     exit 1
 fi
-log_info ".env 文件存在"
 
 # 5. 重新创建 systemd 服务文件（修复版本）
 log_info "步骤 5/6: 重新创建 systemd 服务文件..."
