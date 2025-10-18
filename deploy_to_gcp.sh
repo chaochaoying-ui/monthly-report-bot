@@ -50,8 +50,8 @@ source venv/bin/activate
 
 echo -e "${GREEN}步骤 5/8: 安装Python依赖...${NC}"
 pip install --upgrade pip
-# 安装核心依赖（避免安装不必要的大型库）
-pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 python-dotenv>=1.0.0 || {
+# 安装核心依赖
+pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 websockets>=11.0 python-dotenv>=1.0.0 lark-oapi || {
     echo -e "${RED}依赖安装失败${NC}"
     exit 1
 }
