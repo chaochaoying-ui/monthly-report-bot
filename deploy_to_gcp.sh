@@ -57,12 +57,12 @@ pip install requests>=2.31.0 PyYAML>=6.0.1 pytz>=2023.3 cryptography>=41.0.0 web
 }
 
 echo -e "${GREEN}步骤 6/8: 配置环境变量...${NC}"
-if [ ! -f ".env" ]; then
-    echo "创建.env文件..."
-    cat > .env << 'EOF'
-# 飞书应用配置
-FEISHU_APP_ID=cli_a8fd44a9453cd00c
-FEISHU_APP_SECRET=jsVoFWgaaw05en6418h7xbhV5oXxAwIm
+# 总是重新创建 .env 文件以确保变量名正确
+echo "创建/更新.env文件..."
+cat > .env << 'EOF'
+# 飞书应用配置（注意：变量名必须与代码中一致）
+APP_ID=cli_a8fd44a9453cd00c
+APP_SECRET=jsVoFWgaaw05en6418h7xbhV5oXxAwIm
 CHAT_ID=oc_e4218b232326ea81a077b65c4cd16ce5
 WELCOME_CARD_ID=AAqInYqWzIiu6
 FILE_URL=https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
@@ -70,10 +70,7 @@ VERIFICATION_TOKEN=v_01J6RE0Q4VEcCQ0hFg1RbdLT
 TZ=America/Argentina/Buenos_Aires
 PYTHONIOENCODING=utf-8
 EOF
-    echo -e "${GREEN}.env文件已创建${NC}"
-else
-    echo -e "${YELLOW}.env文件已存在，跳过...${NC}"
-fi
+echo -e "${GREEN}.env文件已创建${NC}"
 
 echo -e "${GREEN}步骤 7/8: 创建systemd服务...${NC}"
 # 获取当前用户和工作目录
