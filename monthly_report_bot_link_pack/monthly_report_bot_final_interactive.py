@@ -39,11 +39,17 @@ try:
     from lark_oapi.api.task.v2 import *
     from lark_oapi.api.task.v2.model import *
     # 导入任务创建所需的类
-    from lark_oapi.api.task.v2 import (
-        CreateTaskRequest, CreateTaskRequestBody,
-        CreateTaskRequestBodyDue, CreateTaskRequestBodyMember
-    )
+    try:
+        from lark_oapi.api.task.v2 import (
+            CreateTaskRequest, CreateTaskRequestBody,
+            CreateTaskRequestBodyDue, CreateTaskRequestBodyMember
+        )
+    except ImportError:
+        # 这些类可能在不同版本的 SDK 中
+        pass
 except Exception as _import_error:
+    import logging as _log
+    _log.error(f"导入飞书SDK失败: {_import_error}")
     lark = None  # 允许在未安装 SDK 时导入本模块以运行纯函数测试
 
 # 引入WS包装器（内部用长轮询模拟以接入事件）
