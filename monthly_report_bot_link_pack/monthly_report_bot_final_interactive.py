@@ -38,6 +38,11 @@ try:
     from lark_oapi.api.im.v1 import *
     from lark_oapi.api.task.v2 import *
     from lark_oapi.api.task.v2.model import *
+    # 导入任务创建所需的类
+    from lark_oapi.api.task.v2 import (
+        CreateTaskRequest, CreateTaskRequestBody,
+        CreateTaskRequestBodyDue, CreateTaskRequestBodyMember
+    )
 except Exception as _import_error:
     lark = None  # 允许在未安装 SDK 时导入本模块以运行纯函数测试
 
@@ -158,6 +163,135 @@ def init_lark_client() -> bool:
 
     except Exception as e:
         logger.error("飞书SDK客户端初始化失败: %s", e)
+        return False
+
+# ---------------------- 任务创建与管理 ----------------------
+
+def load_tasks() -> List[Dict[str, Any]]:
+    """加载任务配置"""
+    if not os.path.exists(TASKS_FILE):
+        logger.error("任务配置文件不存在: %s", TASKS_FILE)
+        return []
+    
+    try:
+        with open(TASKS_FILE, "r", encoding="utf-8") as f:
+            tasks = yaml.safe_load(f)
+            logger.info("加载任务配置成功，共 %d 项", len(tasks))
+            return tasks or []
+    except Exception as e:
+        logger.error("加载任务配置失败: %s", e)
+        return []
+
+async def create_monthly_tasks() -> bool:
+    """创建当月任务（异步版本，使用 lark_oapi SDK）"""
+    try:
+        if not lark_client:
+            logger.error("飞书客户端未初始化")
+            return False
+        
+        current_month = datetime.now(TZ).strftime("%Y-%m")
+        created_tasks = load_created_tasks()
+        
+        # 检查是否已创建
+        if created_tasks.get(current_month, False):
+            logger.info("本月任务已创建，跳过: %s", current_month)
+            return True
+        
+        # 加载任务配置
+        tasks = load_tasks()
+        if not tasks:
+            logger.warning("没有任务配置，跳过创建")
+            return False
+        
+        logger.info("开始创建任务，共 %d 项", len(tasks))
+        
+        success_count = 0
+        failed_tasks = []
+        created_task_ids = []
+        
+        # 创建任务卡片消息
+        await send_text_to_chat(f"🚀 开始创建 {current_month} 月报任务...")
+        
+        for i, task_config in enumerate(tasks, 1):
+            try:
+                # 获取任务信息
+                title = task_config.get("title", "")
+                desc = task_config.get("desc", "")
+                assignee_open_id = task_config.get("assignee_open_id", "").strip()
+                
+                if not assignee_open_id:
+                    logger.warning("跳过无负责人的任务: %s", title)
+                    failed_tasks.append({"title": title, "reason": "no_assignee"})
+                    continue
+                
+                # 生成截止时间（每月23日17:00）
+                now = datetime.now(TZ)
+                due_date = datetime(now.year, now.month, 23, 17, 0, tzinfo=TZ)
+                due_timestamp = int(due_date.timestamp())
+                
+                # 使用 lark_oapi SDK 创建任务
+                from lark_oapi.api.task.v2 import CreateTaskRequest, CreateTaskRequestBody
+                
+                request = CreateTaskRequest.builder() \
+                    .request_body(CreateTaskRequestBody.builder()
+                                .summary(f"{current_month} {title}")
+                                .description(f"{desc}\n\n📎 月报文件链接: {FILE_URL}")
+                                .due(CreateTaskRequestBodyDue.builder()
+                                    .timestamp(str(due_timestamp))
+                                    .build())
+                                .members([CreateTaskRequestBodyMember.builder()
+                                         .id(assignee_open_id)
+                                         .role("assignee")
+                                         .build()])
+                                .build()) \
+                    .build()
+                
+                response = await lark_client.task.v2.task.acreate(request)
+                
+                if response.success():
+                    task_id = response.data.task.guid
+                    created_task_ids.append(task_id)
+                    success_count += 1
+                    logger.info("任务创建成功 [%d/%d]: %s (ID: %s)", i, len(tasks), title, task_id)
+                    
+                    # 更新任务统计
+                    update_task_completion(
+                        task_id=task_id,
+                        task_title=title,
+                        assignees=[assignee_open_id],
+                        completed=False
+                    )
+                else:
+                    error_msg = getattr(response, 'msg', '未知错误')
+                    logger.error("任务创建失败 [%d/%d]: %s - %s", i, len(tasks), title, error_msg)
+                    failed_tasks.append({"title": title, "reason": error_msg})
+                
+            except Exception as e:
+                logger.error("创建任务异常 [%d/%d]: %s - %s", i, len(tasks), title, str(e))
+                failed_tasks.append({"title": title, "reason": str(e)})
+        
+        # 记录创建状态
+        if success_count > 0:
+            created_tasks[current_month] = True
+            save_created_tasks(created_tasks)
+            logger.info("任务创建完成: %s, 成功 %d/%d", current_month, success_count, len(tasks))
+        
+        # 发送结果消息
+        result_msg = f"✅ {current_month} 月报任务创建完成\n"
+        result_msg += f"- 成功: {success_count}/{len(tasks)}\n"
+        if failed_tasks:
+            result_msg += f"- 失败: {len(failed_tasks)}\n"
+            result_msg += "\n失败的任务:\n"
+            for task in failed_tasks[:5]:  # 只显示前5个
+                result_msg += f"  • {task['title']}\n"
+        
+        await send_text_to_chat(result_msg)
+        
+        return success_count > 0
+        
+    except Exception as e:
+        logger.error("创建月度任务异常: %s", e)
+        await send_text_to_chat(f"❌ 任务创建失败: {str(e)}")
         return False
 
 # ---------------------- 任务统计管理 ----------------------
@@ -1307,11 +1441,8 @@ async def main_loop():
 
             if should_create_tasks(now):
                 logger.info("执行任务创建...")
-                success = await create_tasks()
-                if success:
-                    card = build_task_creation_card()
-                    await send_card_to_chat(card)
-                else:
+                success = await create_monthly_tasks()
+                if not success:
                     await send_text_to_chat("❌ 任务创建失败，请检查配置")
 
             elif should_send_daily_reminder(now):
@@ -1351,63 +1482,7 @@ async def main_loop():
             logger.error("主循环异常: %s", e)
             await asyncio.sleep(60)
 
-async def create_tasks() -> bool:
-    """创建月度报告任务（复用原有逻辑）"""
-    try:
-        created_tasks = load_created_tasks()
-        current_month = datetime.now(TZ).strftime("%Y-%m")
-
-        if created_tasks.get(current_month, False):
-            logger.info("本月任务已创建，跳过")
-            return True
-
-        if not os.path.exists(TASKS_FILE):
-            logger.error("任务配置文件不存在: %s", TASKS_FILE)
-            return False
-
-        with open(TASKS_FILE, 'r', encoding='utf-8') as f:
-            tasks_config = yaml.safe_load(f)
-
-        if isinstance(tasks_config, dict) and 'tasks' in tasks_config:
-            task_list = tasks_config['tasks']
-        elif isinstance(tasks_config, list):
-            task_list = tasks_config
-        else:
-            logger.error("任务配置文件格式错误: 需为列表或包含 tasks 键的字典")
-            return False
-
-        logger.info("开始创建月度报告任务...")
-        success_count = 0
-
-        for task_config in task_list:
-            try:
-                task_title = task_config['title']
-                task_id = f"task_{current_month}_{success_count + 1}"
-                assignees = []
-                if 'assignee_open_id' in task_config:
-                    if isinstance(task_config['assignee_open_id'], list):
-                        assignees = task_config['assignee_open_id']
-                    else:
-                        assignees = [task_config['assignee_open_id']]
-                assignees = [a for a in assignees if a and a.strip()]
-                logger.info("模拟创建任务: %s (ID: %s)", task_title, task_id)
-                update_task_completion(task_id, task_config['title'], assignees, False)
-                success_count += 1
-            except Exception as e:
-                logger.error("创建任务异常: %s, 任务: %s", e, task_config.get('title', 'Unknown'))
-
-        if success_count > 0:
-            created_tasks[current_month] = True
-            save_created_tasks(created_tasks)
-            logger.info("本月任务创建完成，成功创建 %d 个任务", success_count)
-            return True
-        else:
-            logger.error("没有成功创建任何任务")
-            return False
-
-    except Exception as e:
-        logger.error("创建任务异常: %s", e)
-        return False
+# 注：create_monthly_tasks 函数已在上方定义（使用 lark_oapi SDK 真实创建任务）
 
 # ---------------------- 任务记录文件 ----------------------
 
