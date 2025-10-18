@@ -38,15 +38,8 @@ try:
     from lark_oapi.api.im.v1 import *
     from lark_oapi.api.task.v2 import *
     from lark_oapi.api.task.v2.model import *
-    # 导入任务创建所需的类
-    try:
-        from lark_oapi.api.task.v2 import (
-            CreateTaskRequest, CreateTaskRequestBody,
-            CreateTaskRequestBodyDue, CreateTaskRequestBodyMember
-        )
-    except ImportError:
-        # 这些类可能在不同版本的 SDK 中
-        pass
+    # lark-oapi SDK 导入成功，可用于消息发送等功能
+    # 注意：不使用飞书 Task API，而是通过卡片消息实现任务管理
 except Exception as _import_error:
     import logging as _log
     _log.error(f"导入飞书SDK失败: {_import_error}")
@@ -171,6 +164,66 @@ def init_lark_client() -> bool:
         logger.error("飞书SDK客户端初始化失败: %s", e)
         return False
 
+# ---------------------- 消息发送辅助函数 ----------------------
+
+async def send_text_to_chat(text: str) -> bool:
+    """发送文本消息到群聊"""
+    try:
+        if not lark_client:
+            logger.error("飞书客户端未初始化")
+            return False
+        
+        request = CreateMessageRequest.builder() \
+            .receive_id_type("chat_id") \
+            .request_body(CreateMessageRequestBody.builder()
+                         .receive_id(CHAT_ID)
+                         .msg_type("text")
+                         .content(json.dumps({"text": text}, ensure_ascii=False))
+                         .build()) \
+            .build()
+        
+        response = lark_client.im.v1.message.create(request)
+        
+        if response.success():
+            logger.info("文本消息发送成功: %s", text[:50])
+            return True
+        else:
+            logger.error("文本消息发送失败: %s", response.msg)
+            return False
+            
+    except Exception as e:
+        logger.error("发送文本消息异常: %s", e)
+        return False
+
+async def send_card_to_chat(card_content: Dict) -> bool:
+    """发送卡片消息到群聊"""
+    try:
+        if not lark_client:
+            logger.error("飞书客户端未初始化")
+            return False
+        
+        request = CreateMessageRequest.builder() \
+            .receive_id_type("chat_id") \
+            .request_body(CreateMessageRequestBody.builder()
+                         .receive_id(CHAT_ID)
+                         .msg_type("interactive")
+                         .content(json.dumps(card_content, ensure_ascii=False))
+                         .build()) \
+            .build()
+        
+        response = lark_client.im.v1.message.create(request)
+        
+        if response.success():
+            logger.info("卡片消息发送成功")
+            return True
+        else:
+            logger.error("卡片消息发送失败: %s", response.msg)
+            return False
+            
+    except Exception as e:
+        logger.error("发送卡片消息异常: %s", e)
+        return False
+
 # ---------------------- 任务创建与管理 ----------------------
 
 def load_tasks() -> List[Dict[str, Any]]:
@@ -189,12 +242,8 @@ def load_tasks() -> List[Dict[str, Any]]:
         return []
 
 async def create_monthly_tasks() -> bool:
-    """创建当月任务（异步版本，使用 lark_oapi SDK）"""
+    """创建当月任务（发送卡片消息到群聊）"""
     try:
-        if not lark_client:
-            logger.error("飞书客户端未初始化")
-            return False
-        
         current_month = datetime.now(TZ).strftime("%Y-%m")
         created_tasks = load_created_tasks()
         
@@ -213,9 +262,8 @@ async def create_monthly_tasks() -> bool:
         
         success_count = 0
         failed_tasks = []
-        created_task_ids = []
         
-        # 创建任务卡片消息
+        # 发送开始消息
         await send_text_to_chat(f"🚀 开始创建 {current_month} 月报任务...")
         
         for i, task_config in enumerate(tasks, 1):
@@ -223,44 +271,61 @@ async def create_monthly_tasks() -> bool:
                 # 获取任务信息
                 title = task_config.get("title", "")
                 desc = task_config.get("desc", "")
+                doc_url = task_config.get("doc_url", FILE_URL)
                 assignee_open_id = task_config.get("assignee_open_id", "").strip()
                 
                 if not assignee_open_id:
                     logger.warning("跳过无负责人的任务: %s", title)
-                    failed_tasks.append({"title": title, "reason": "no_assignee"})
+                    failed_tasks.append(title)
                     continue
                 
-                # 生成截止时间（每月23日17:00）
-                now = datetime.now(TZ)
-                due_date = datetime(now.year, now.month, 23, 17, 0, tzinfo=TZ)
-                due_timestamp = int(due_date.timestamp())
+                # 创建任务卡片
+                card_content = {
+                    "elements": [
+                        {
+                            "tag": "div",
+                            "text": {
+                                "content": f"📋 **{title}**",
+                                "tag": "lark_md"
+                            }
+                        },
+                        {
+                            "tag": "div",
+                            "text": {
+                                "content": f"👤 负责人: <at id=\"{assignee_open_id}\"></at>",
+                                "tag": "lark_md"
+                            }
+                        },
+                        {
+                            "tag": "div",
+                            "text": {
+                                "content": f"📄 [查看文档]({doc_url})",
+                                "tag": "lark_md"
+                            }
+                        },
+                        {
+                            "tag": "div",
+                            "text": {
+                                "content": "💡 完成后请在群聊中回复「已完成」来标记任务完成",
+                                "tag": "lark_md"
+                            }
+                        }
+                    ],
+                    "header": {
+                        "title": {
+                            "content": f"{current_month} 月报任务",
+                            "tag": "plain_text"
+                        }
+                    }
+                }
                 
-                # 使用 lark_oapi SDK 创建任务
-                from lark_oapi.api.task.v2 import CreateTaskRequest, CreateTaskRequestBody
-                
-                request = CreateTaskRequest.builder() \
-                    .request_body(CreateTaskRequestBody.builder()
-                                .summary(f"{current_month} {title}")
-                                .description(f"{desc}\n\n📎 月报文件链接: {FILE_URL}")
-                                .due(CreateTaskRequestBodyDue.builder()
-                                    .timestamp(str(due_timestamp))
-                                    .build())
-                                .members([CreateTaskRequestBodyMember.builder()
-                                         .id(assignee_open_id)
-                                         .role("assignee")
-                                         .build()])
-                                .build()) \
-                    .build()
-                
-                response = await lark_client.task.v2.task.acreate(request)
-                
-                if response.success():
-                    task_id = response.data.task.guid
-                    created_task_ids.append(task_id)
+                # 发送任务卡片到群聊
+                if await send_card_to_chat(card_content):
                     success_count += 1
-                    logger.info("任务创建成功 [%d/%d]: %s (ID: %s)", i, len(tasks), title, task_id)
+                    logger.info("任务创建成功 [%d/%d]: %s", i, len(tasks), title)
                     
-                    # 更新任务统计
+                    # 更新任务统计（使用标题作为任务ID）
+                    task_id = f"{current_month}_{title}"
                     update_task_completion(
                         task_id=task_id,
                         task_title=title,
@@ -268,13 +333,15 @@ async def create_monthly_tasks() -> bool:
                         completed=False
                     )
                 else:
-                    error_msg = getattr(response, 'msg', '未知错误')
-                    logger.error("任务创建失败 [%d/%d]: %s - %s", i, len(tasks), title, error_msg)
-                    failed_tasks.append({"title": title, "reason": error_msg})
+                    logger.error("任务创建失败 [%d/%d]: %s", i, len(tasks), title)
+                    failed_tasks.append(title)
+                
+                # 避免发送过快
+                await asyncio.sleep(0.5)
                 
             except Exception as e:
                 logger.error("创建任务异常 [%d/%d]: %s - %s", i, len(tasks), title, str(e))
-                failed_tasks.append({"title": title, "reason": str(e)})
+                failed_tasks.append(title)
         
         # 记录创建状态
         if success_count > 0:
@@ -289,7 +356,7 @@ async def create_monthly_tasks() -> bool:
             result_msg += f"- 失败: {len(failed_tasks)}\n"
             result_msg += "\n失败的任务:\n"
             for task in failed_tasks[:5]:  # 只显示前5个
-                result_msg += f"  • {task['title']}\n"
+                result_msg += f"  • {task}\n"
         
         await send_text_to_chat(result_msg)
         
