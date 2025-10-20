@@ -373,33 +373,33 @@ async def send_daily_reminder() -> bool:
     """发送每日任务提醒，@未完成任务的负责人"""
     try:
         stats = get_task_completion_stats()
-        
+
         if stats['total_tasks'] == 0:
             logger.info("没有任务，跳过每日提醒")
             return True
-        
+
         # 获取未完成的任务
         incomplete_tasks = []
         incomplete_assignees = set()
-        
+
         for task_id, task_info in stats['tasks'].items():
             if not task_info.get('completed', False):
                 incomplete_tasks.append(task_info)
                 for assignee in task_info.get('assignees', []):
                     incomplete_assignees.add(assignee)
-        
+
         if not incomplete_tasks:
             logger.info("所有任务已完成，跳过每日提醒")
             return True
-        
+
         # 构建提醒消息
         current_date = datetime.now(TZ).strftime("%Y-%m-%d")
-        
+
         # 创建@负责人的文本
         assignee_mentions = []
         for assignee in incomplete_assignees:
             assignee_mentions.append(f"<at id=\"{assignee}\"></at>")
-        
+
         # 构建卡片内容
         card_content = {
             "elements": [
@@ -452,13 +452,13 @@ async def send_daily_reminder() -> bool:
                 }
             }
         }
-        
+
         # 添加未完成任务列表（最多显示前10个）
         for i, task in enumerate(incomplete_tasks[:10], 1):
             task_assignees = []
             for assignee in task.get('assignees', []):
                 task_assignees.append(f"<at id=\"{assignee}\"></at>")
-            
+
             task_element = {
                 "tag": "div",
                 "text": {
@@ -467,7 +467,7 @@ async def send_daily_reminder() -> bool:
                 }
             }
             card_content["elements"].append(task_element)
-        
+
         if len(incomplete_tasks) > 10:
             card_content["elements"].append({
                 "tag": "div",
@@ -476,12 +476,12 @@ async def send_daily_reminder() -> bool:
                     "tag": "lark_md"
                 }
             })
-        
+
         # 添加提醒文本
         card_content["elements"].append({
             "tag": "hr"
         })
-        
+
         card_content["elements"].append({
             "tag": "div",
             "text": {
@@ -489,17 +489,17 @@ async def send_daily_reminder() -> bool:
                 "tag": "lark_md"
             }
         })
-        
+
         # 发送卡片
         success = await send_card_to_chat(card_content)
-        
+
         if success:
             logger.info("每日提醒发送成功，@了 %d 个负责人", len(incomplete_assignees))
         else:
             logger.error("每日提醒发送失败")
-        
+
         return success
-        
+
     except Exception as e:
         logger.error("发送每日提醒异常: %s", e)
         return False
@@ -1728,6 +1728,10 @@ async def test_daily_reminder():
     except Exception as e:
         logger.error("测试每日提醒异常: %s", e)
         return False
+
+def get_task_completion_stats() -> Dict[str, Any]:
+    """获取任务完成统计信息"""
+    return load_task_stats()
 
 # ---------------------- 启动入口 ----------------------
 
