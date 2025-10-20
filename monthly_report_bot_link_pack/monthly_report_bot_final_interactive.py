@@ -1730,8 +1730,54 @@ async def test_daily_reminder():
         return False
 
 def get_task_completion_stats() -> Dict[str, Any]:
-    """获取任务完成统计信息"""
-    return load_task_stats()
+    """获取任务完成统计信息（返回统一结构）
+
+    说明：
+    - 统一返回包含 pending_tasks 与 pending_assignees 的结构，供卡片/提醒直接使用。
+    - 避免因缺少键导致的 KeyError（如 'pending_assignees'）。
+    """
+    try:
+        stats = load_task_stats()
+
+        # 基础字段兜底
+        current_month = stats.get("current_month") or datetime.now(TZ).strftime("%Y-%m")
+        total_tasks = int(stats.get("total_tasks", 0) or 0)
+        completed_tasks = int(stats.get("completed_tasks", 0) or 0)
+        completion_rate = float(stats.get("completion_rate", 0.0) or 0.0)
+
+        # 计算未完成任务与负责人集合
+        pending_assignees_set: set[str] = set()
+        tasks_dict = stats.get("tasks") or {}
+        for _task_id, task_info in tasks_dict.items():
+            if not task_info.get("completed", False):
+                for a in task_info.get("assignees", []) or []:
+                    if a:
+                        pending_assignees_set.add(str(a))
+
+        pending_assignees = list(pending_assignees_set)
+        pending_tasks = max(total_tasks - completed_tasks, 0)
+
+        # 返回统一结构
+        return {
+            "current_month": current_month,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "completion_rate": completion_rate,
+            "pending_tasks": pending_tasks,
+            "pending_assignees": pending_assignees,
+            "tasks": tasks_dict,
+        }
+    except Exception as e:
+        logger.error("获取任务完成统计失败: %s", e)
+        return {
+            "current_month": datetime.now(TZ).strftime("%Y-%m"),
+            "total_tasks": 0,
+            "completed_tasks": 0,
+            "completion_rate": 0.0,
+            "pending_tasks": 0,
+            "pending_assignees": [],
+            "tasks": {},
+        }
 
 # ---------------------- 启动入口 ----------------------
 
