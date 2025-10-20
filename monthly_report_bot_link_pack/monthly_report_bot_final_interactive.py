@@ -172,7 +172,7 @@ async def send_text_to_chat(text: str) -> bool:
         if not lark_client:
             logger.error("飞书客户端未初始化")
             return False
-        
+
         request = CreateMessageRequest.builder() \
             .receive_id_type("chat_id") \
             .request_body(CreateMessageRequestBody.builder()
@@ -181,16 +181,16 @@ async def send_text_to_chat(text: str) -> bool:
                          .content(json.dumps({"text": text}, ensure_ascii=False))
                          .build()) \
             .build()
-        
+
         response = lark_client.im.v1.message.create(request)
-        
+
         if response.success():
             logger.info("文本消息发送成功: %s", text[:50])
             return True
         else:
             logger.error("文本消息发送失败: %s", response.msg)
             return False
-            
+
     except Exception as e:
         logger.error("发送文本消息异常: %s", e)
         return False
@@ -201,7 +201,7 @@ async def send_card_to_chat(card_content: Dict) -> bool:
         if not lark_client:
             logger.error("飞书客户端未初始化")
             return False
-        
+
         request = CreateMessageRequest.builder() \
             .receive_id_type("chat_id") \
             .request_body(CreateMessageRequestBody.builder()
@@ -210,16 +210,16 @@ async def send_card_to_chat(card_content: Dict) -> bool:
                          .content(json.dumps(card_content, ensure_ascii=False))
                          .build()) \
             .build()
-        
+
         response = lark_client.im.v1.message.create(request)
-        
+
         if response.success():
             logger.info("卡片消息发送成功")
             return True
         else:
             logger.error("卡片消息发送失败: %s", response.msg)
             return False
-            
+
     except Exception as e:
         logger.error("发送卡片消息异常: %s", e)
         return False
@@ -231,7 +231,7 @@ def load_tasks() -> List[Dict[str, Any]]:
     if not os.path.exists(TASKS_FILE):
         logger.error("任务配置文件不存在: %s", TASKS_FILE)
         return []
-    
+
     try:
         with open(TASKS_FILE, "r", encoding="utf-8") as f:
             tasks = yaml.safe_load(f)
@@ -246,26 +246,26 @@ async def create_monthly_tasks() -> bool:
     try:
         current_month = datetime.now(TZ).strftime("%Y-%m")
         created_tasks = load_created_tasks()
-        
+
         # 检查是否已创建
         if created_tasks.get(current_month, False):
             logger.info("本月任务已创建，跳过: %s", current_month)
             return True
-        
+
         # 加载任务配置
         tasks = load_tasks()
         if not tasks:
             logger.warning("没有任务配置，跳过创建")
             return False
-        
+
         logger.info("开始创建任务，共 %d 项", len(tasks))
-        
+
         success_count = 0
         failed_tasks = []
-        
+
         # 发送开始消息
         await send_text_to_chat(f"🚀 开始创建 {current_month} 月报任务...")
-        
+
         for i, task_config in enumerate(tasks, 1):
             try:
                 # 获取任务信息
@@ -273,12 +273,12 @@ async def create_monthly_tasks() -> bool:
                 desc = task_config.get("desc", "")
                 doc_url = task_config.get("doc_url", FILE_URL)
                 assignee_open_id = task_config.get("assignee_open_id", "").strip()
-                
+
                 if not assignee_open_id:
                     logger.warning("跳过无负责人的任务: %s", title)
                     failed_tasks.append(title)
                     continue
-                
+
                 # 创建任务卡片
                 card_content = {
                     "elements": [
@@ -318,12 +318,12 @@ async def create_monthly_tasks() -> bool:
                         }
                     }
                 }
-                
+
                 # 发送任务卡片到群聊
                 if await send_card_to_chat(card_content):
                     success_count += 1
                     logger.info("任务创建成功 [%d/%d]: %s", i, len(tasks), title)
-                    
+
                     # 更新任务统计（使用标题作为任务ID）
                     task_id = f"{current_month}_{title}"
                     update_task_completion(
@@ -335,20 +335,20 @@ async def create_monthly_tasks() -> bool:
                 else:
                     logger.error("任务创建失败 [%d/%d]: %s", i, len(tasks), title)
                     failed_tasks.append(title)
-                
+
                 # 避免发送过快
                 await asyncio.sleep(0.5)
-                
+
             except Exception as e:
                 logger.error("创建任务异常 [%d/%d]: %s - %s", i, len(tasks), title, str(e))
                 failed_tasks.append(title)
-        
+
         # 记录创建状态
         if success_count > 0:
             created_tasks[current_month] = True
             save_created_tasks(created_tasks)
             logger.info("任务创建完成: %s, 成功 %d/%d", current_month, success_count, len(tasks))
-        
+
         # 发送结果消息
         result_msg = f"✅ {current_month} 月报任务创建完成\n"
         result_msg += f"- 成功: {success_count}/{len(tasks)}\n"
@@ -357,14 +357,151 @@ async def create_monthly_tasks() -> bool:
             result_msg += "\n失败的任务:\n"
             for task in failed_tasks[:5]:  # 只显示前5个
                 result_msg += f"  • {task}\n"
-        
+
         await send_text_to_chat(result_msg)
-        
+
         return success_count > 0
-        
+
     except Exception as e:
         logger.error("创建月度任务异常: %s", e)
         await send_text_to_chat(f"❌ 任务创建失败: {str(e)}")
+        return False
+
+# ---------------------- 每日提醒功能 ----------------------
+
+async def send_daily_reminder() -> bool:
+    """发送每日任务提醒，@未完成任务的负责人"""
+    try:
+        stats = get_task_completion_stats()
+        
+        if stats['total_tasks'] == 0:
+            logger.info("没有任务，跳过每日提醒")
+            return True
+        
+        # 获取未完成的任务
+        incomplete_tasks = []
+        incomplete_assignees = set()
+        
+        for task_id, task_info in stats['tasks'].items():
+            if not task_info.get('completed', False):
+                incomplete_tasks.append(task_info)
+                for assignee in task_info.get('assignees', []):
+                    incomplete_assignees.add(assignee)
+        
+        if not incomplete_tasks:
+            logger.info("所有任务已完成，跳过每日提醒")
+            return True
+        
+        # 构建提醒消息
+        current_date = datetime.now(TZ).strftime("%Y-%m-%d")
+        
+        # 创建@负责人的文本
+        assignee_mentions = []
+        for assignee in incomplete_assignees:
+            assignee_mentions.append(f"<at id=\"{assignee}\"></at>")
+        
+        # 构建卡片内容
+        card_content = {
+            "elements": [
+                {
+                    "tag": "div",
+                    "text": {
+                        "content": f"📅 **每日任务提醒** - {current_date}",
+                        "tag": "lark_md"
+                    }
+                },
+                {
+                    "tag": "hr"
+                },
+                {
+                    "tag": "div",
+                    "text": {
+                        "content": f"📊 **月度报告任务进度提醒**",
+                        "tag": "lark_md"
+                    }
+                },
+                {
+                    "tag": "div",
+                    "text": {
+                        "content": f"📈 **当前进度:**\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 待完成: {stats['total_tasks'] - stats['completed_tasks']}\n• 完成率: {stats['completion_rate']:.1f}%",
+                        "tag": "lark_md"
+                    }
+                },
+                {
+                    "tag": "hr"
+                },
+                {
+                    "tag": "div",
+                    "text": {
+                        "content": f"👥 **未完成任务的负责人:**\n{chr(10).join(assignee_mentions)}",
+                        "tag": "lark_md"
+                    }
+                },
+                {
+                    "tag": "div",
+                    "text": {
+                        "content": "📋 **未完成任务详情:**",
+                        "tag": "lark_md"
+                    }
+                }
+            ],
+            "header": {
+                "title": {
+                    "content": "每日任务提醒",
+                    "tag": "plain_text"
+                }
+            }
+        }
+        
+        # 添加未完成任务列表（最多显示前10个）
+        for i, task in enumerate(incomplete_tasks[:10], 1):
+            task_assignees = []
+            for assignee in task.get('assignees', []):
+                task_assignees.append(f"<at id=\"{assignee}\"></at>")
+            
+            task_element = {
+                "tag": "div",
+                "text": {
+                    "content": f"{i}. **{task['title']}**\n👤 负责人: {', '.join(task_assignees) if task_assignees else '未分配'}",
+                    "tag": "lark_md"
+                }
+            }
+            card_content["elements"].append(task_element)
+        
+        if len(incomplete_tasks) > 10:
+            card_content["elements"].append({
+                "tag": "div",
+                "text": {
+                    "content": f"... 还有 {len(incomplete_tasks) - 10} 个未完成任务",
+                    "tag": "lark_md"
+                }
+            })
+        
+        # 添加提醒文本
+        card_content["elements"].append({
+            "tag": "hr"
+        })
+        
+        card_content["elements"].append({
+            "tag": "div",
+            "text": {
+                "content": f"⏰ **提醒:** {chr(10).join(assignee_mentions)} 请尽快完成任务！",
+                "tag": "lark_md"
+            }
+        })
+        
+        # 发送卡片
+        success = await send_card_to_chat(card_content)
+        
+        if success:
+            logger.info("每日提醒发送成功，@了 %d 个负责人", len(incomplete_assignees))
+        else:
+            logger.error("每日提醒发送失败")
+        
+        return success
+        
+    except Exception as e:
+        logger.error("发送每日提醒异常: %s", e)
         return False
 
 # ---------------------- 任务统计管理 ----------------------
@@ -1575,6 +1712,22 @@ def save_created_tasks(tasks: Dict[str, bool]) -> None:
             json.dump(tasks, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.error("保存任务记录失败: %s", e)
+
+# ---------------------- 测试功能 ----------------------
+
+async def test_daily_reminder():
+    """测试每日提醒功能"""
+    try:
+        logger.info("开始测试每日提醒功能...")
+        success = await send_daily_reminder()
+        if success:
+            logger.info("✅ 每日提醒测试成功")
+        else:
+            logger.error("❌ 每日提醒测试失败")
+        return success
+    except Exception as e:
+        logger.error("测试每日提醒异常: %s", e)
+        return False
 
 # ---------------------- 启动入口 ----------------------
 
