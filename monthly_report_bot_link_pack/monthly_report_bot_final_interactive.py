@@ -398,7 +398,8 @@ async def send_daily_reminder() -> bool:
         # 创建@负责人的文本
         assignee_mentions = []
         for assignee in incomplete_assignees:
-            assignee_mentions.append(f"<at id=\"{assignee}\"></at>")
+            display_name = get_user_display_name(assignee)
+            assignee_mentions.append(f"<at user_id=\"{assignee}\">{display_name}</at>")
 
         # 构建卡片内容
         card_content = {
@@ -457,7 +458,8 @@ async def send_daily_reminder() -> bool:
         for i, task in enumerate(incomplete_tasks[:10], 1):
             task_assignees = []
             for assignee in task.get('assignees', []):
-                task_assignees.append(f"<at id=\"{assignee}\"></at>")
+                display_name = get_user_display_name(assignee)
+                task_assignees.append(f"<at user_id=\"{assignee}\">{display_name}</at>")
 
             task_element = {
                 "tag": "div",
@@ -797,7 +799,8 @@ def build_task_creation_card() -> Dict:
         assignee_mentions = ""
         if task["assignees"]:
             for assignee in task["assignees"]:
-                assignee_mentions += f"<at user_id=\"{assignee}\"></at> "
+                display_name = get_user_display_name(assignee)
+                assignee_mentions += f"<at user_id=\"{assignee}\">{display_name}</at> "
         else:
             assignee_mentions = "**待分配**"
 
@@ -1719,6 +1722,12 @@ async def test_daily_reminder():
     """测试每日提醒功能"""
     try:
         logger.info("开始测试每日提醒功能...")
+
+        # 初始化飞书客户端
+        if not init_lark_client():
+            logger.error("❌ 飞书客户端初始化失败")
+            return False
+
         success = await send_daily_reminder()
         if success:
             logger.info("✅ 每日提醒测试成功")
