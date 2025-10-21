@@ -499,3 +499,76 @@ def get_request_extension_text(language: str) -> str:
     }
     return texts.get(language, texts["zh"])
 
+def build_progress_chart_card(stats: Dict[str, Any], language: str = "zh") -> Dict[str, Any]:
+    """
+    构建进度图表卡片（18-22日17:00发送）
+
+    Args:
+        stats: 任务完成统计数据
+        language: 语言（zh/en/es）
+
+    Returns:
+        卡片JSON对象
+    """
+    from datetime import datetime
+    import pytz
+
+    TZ = pytz.timezone("America/Argentina/Buenos_Aires")
+    now = datetime.now(TZ)
+    date_str = now.strftime("%Y年%m月%d日")
+
+    # 标题文本
+    title_texts = {
+        "zh": f"📊 月报任务进度 - {date_str}",
+        "en": f"📊 Monthly Report Progress - {now.strftime('%Y-%m-%d')}",
+        "es": f"📊 Progreso del Reporte Mensual - {now.strftime('%Y-%m-%d')}"
+    }
+
+    # 计算完成率
+    total = stats.get("total", 0)
+    completed = stats.get("completed", 0)
+    completion_rate = (completed / total * 100) if total > 0 else 0
+
+    # 构建统计信息文本
+    stats_text = f"**总任务**: {total}\\n**已完成**: {completed}\\n**未完成**: {total - completed}\\n**完成率**: {completion_rate:.1f}%"
+
+    # 分专业统计
+    by_category = stats.get("by_category", {})
+    if by_category:
+        stats_text += "\\n\\n**分专业进度:**\\n"
+        for category, cat_stats in by_category.items():
+            cat_total = cat_stats.get("total", 0)
+            cat_completed = cat_stats.get("completed", 0)
+            cat_rate = (cat_completed / cat_total * 100) if cat_total > 0 else 0
+            stats_text += f"• {category}: {cat_completed}/{cat_total} ({cat_rate:.0f}%)\\n"
+
+    card = {
+        "header": {
+            "title": {
+                "tag": "plain_text",
+                "content": title_texts.get(language, title_texts["zh"])
+            },
+            "template": "green"
+        },
+        "elements": [
+            {
+                "tag": "markdown",
+                "content": stats_text
+            },
+            {
+                "tag": "hr"
+            },
+            {
+                "tag": "note",
+                "elements": [
+                    {
+                        "tag": "plain_text",
+                        "content": "可视化任务进度" if language == "zh" else "Task Progress Visualization"
+                    }
+                ]
+            }
+        ]
+    }
+
+    return card
+

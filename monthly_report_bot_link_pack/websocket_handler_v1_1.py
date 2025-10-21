@@ -160,19 +160,20 @@ class FeishuWebSocketHandler:
         except Exception as e:
             logger.error("处理心跳失败: %s", e)
     
+    def set_message_handler(self, handler: Callable):
+        """设置消息处理器"""
+        self.user_message_handler = handler
+        logger.info("已设置用户消息处理器")
+
     async def _handle_message_receive(self, event: Dict):
         """处理消息接收事件"""
         try:
-            message = event.get("message", {})
-            message_type = message.get("content", {}).get("type")
-            
-            # 调用对应的消息处理器
-            if message_type in self.message_handlers:
-                handler = self.message_handlers[message_type]
-                await handler(event)
+            # 调用用户消息处理器（如果已设置）
+            if hasattr(self, 'user_message_handler') and self.user_message_handler:
+                await self.user_message_handler(event)
             else:
-                logger.info("未找到消息处理器: %s", message_type)
-                
+                logger.info("未设置用户消息处理器，跳过消息处理")
+
         except Exception as e:
             logger.error("处理消息接收事件失败: %s", e)
     
