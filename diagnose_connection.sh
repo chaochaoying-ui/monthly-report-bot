@@ -21,18 +21,18 @@ if [ -f .env ]; then
     echo ""
 
     # 读取并显示环境变量（脱敏）
-    if grep -q "FEISHU_APP_ID" .env; then
-        APP_ID=$(grep "FEISHU_APP_ID" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ')
-        echo "FEISHU_APP_ID = ${APP_ID:0:8}... (长度: ${#APP_ID})"
+    if grep -q "^APP_ID" .env; then
+        APP_ID=$(grep "^APP_ID" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ')
+        echo "APP_ID = ${APP_ID:0:8}... (长度: ${#APP_ID})"
     else
-        echo "❌ 缺少 FEISHU_APP_ID"
+        echo "❌ 缺少 APP_ID"
     fi
 
-    if grep -q "FEISHU_APP_SECRET" .env; then
-        APP_SECRET=$(grep "FEISHU_APP_SECRET" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ')
-        echo "FEISHU_APP_SECRET = ${APP_SECRET:0:8}... (长度: ${#APP_SECRET})"
+    if grep -q "^APP_SECRET" .env; then
+        APP_SECRET=$(grep "^APP_SECRET" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ')
+        echo "APP_SECRET = ${APP_SECRET:0:8}... (长度: ${#APP_SECRET})"
     else
-        echo "❌ 缺少 FEISHU_APP_SECRET"
+        echo "❌ 缺少 APP_SECRET"
     fi
 
     if grep -q "CHAT_ID" .env; then
@@ -83,8 +83,8 @@ with open(env_file, 'r', encoding='utf-8') as f:
             key, value = line.split('=', 1)
             env_vars[key.strip()] = value.strip().strip('"').strip("'")
 
-app_id = env_vars.get('FEISHU_APP_ID', '')
-app_secret = env_vars.get('FEISHU_APP_SECRET', '')
+app_id = env_vars.get('APP_ID', '')
+app_secret = env_vars.get('APP_SECRET', '')
 chat_id = env_vars.get('CHAT_ID', '')
 
 print("验证结果:")
@@ -170,8 +170,8 @@ with open(env_file, 'r', encoding='utf-8') as f:
             key, value = line.split('=', 1)
             env_vars[key.strip()] = value.strip().strip('"').strip("'")
 
-app_id = env_vars.get('FEISHU_APP_ID', '')
-app_secret = env_vars.get('FEISHU_APP_SECRET', '')
+app_id = env_vars.get('APP_ID', '')
+app_secret = env_vars.get('APP_SECRET', '')
 
 print("测试获取租户令牌...")
 print("")
