@@ -113,6 +113,16 @@ else
 fi
 
 echo ""
+echo "初始化真实月报任务数据..."
+python3 init_real_tasks.py
+
+if [ $? -eq 0 ]; then
+    echo "✅ 任务数据初始化完成（23个真实任务，刘野和范明杰的任务已标记为完成）"
+else
+    echo "⚠️  任务数据初始化失败，但继续部署（将在首次运行时创建）"
+fi
+
+echo ""
 echo "更新 systemd 服务配置为 v1.1..."
 
 # 更新 systemd service 文件
