@@ -340,7 +340,7 @@ def get_pending_tasks_detail() -> List[Dict[str, Any]]:
     try:
         stats = load_task_stats()
         pending_tasks = []
-        
+
         for task_id, task_info in stats["tasks"].items():
             if not task_info["completed"]:
                 pending_tasks.append({
@@ -348,12 +348,29 @@ def get_pending_tasks_detail() -> List[Dict[str, Any]]:
                     "title": task_info["title"],
                     "assignees": task_info["assignees"]
                 })
-        
+
         return pending_tasks
-        
+
     except Exception as e:
         logger.error("获取未完成任务详情失败: %s", e)
         return []
+
+def get_completed_assignees_summary() -> Dict[str, int]:
+    """获取已完成任务的人员统计（每个人完成了多少个任务）"""
+    try:
+        stats = load_task_stats()
+        completed_counts = {}
+
+        for task_id, task_info in stats["tasks"].items():
+            if task_info["completed"]:
+                for assignee in task_info["assignees"]:
+                    completed_counts[assignee] = completed_counts.get(assignee, 0) + 1
+
+        return completed_counts
+
+    except Exception as e:
+        logger.error("获取已完成人员统计失败: %s", e)
+        return {}
 
 # ---------------------- 用户信息映射 ----------------------
 
@@ -388,6 +405,7 @@ USER_ID_MAPPING = {
     "ou_9847326a1fea8db87079101775bd97a9": "王冠群",
     "ou_31b587d7ca13d371a0d5b798ebb475fe": "钟飞宏",
     "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
+    "ou_33d81ce8839d93132e4417530f60c4a9": "高雅慧",
 }
 
 def get_user_display_name(user_id: str) -> str:
@@ -807,6 +825,15 @@ def generate_echo_reply(text: str) -> str:
             f"- 待完成: {stats['pending_tasks']}",
             f"- 完成率: {stats['completion_rate']}%",
         ]
+
+        # 添加已完成人员统计
+        completed_summary = get_completed_assignees_summary()
+        if completed_summary:
+            lines.append("\n✅ 已完成人员:")
+            for assignee_id, count in sorted(completed_summary.items(), key=lambda x: x[1], reverse=True):
+                display_name = get_user_display_name(assignee_id)
+                lines.append(f"   • {display_name}: {count}个任务")
+
         lines.append("\n👉 查看未完成任务请发送『未完成』或『谁没交』")
         lines.append("📈 发送『图表』或『可视化』查看美观的统计图表")
         return "\n".join(lines)
@@ -949,7 +976,7 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
             await reply_to_message(message_id, "\n".join(out))
             return True
 
-        # 状态/进度/统计 → 若当月未创建任务则直接回复“当前没有任务”
+        # 状态/进度/统计 → 若当月未创建任务则直接回复"当前没有任务"
         if normalized in {"状态", "进度", "统计", "完成率", "status", "progress", "summary"}:
             try:
                 created = load_created_tasks()
@@ -967,6 +994,15 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
                 f"- 待完成: {stats['pending_tasks']}",
                 f"- 完成率: {stats['completion_rate']}%",
             ]
+
+            # 添加已完成人员统计
+            completed_summary = get_completed_assignees_summary()
+            if completed_summary:
+                lines.append("\n✅ 已完成人员:")
+                for assignee_id, count in sorted(completed_summary.items(), key=lambda x: x[1], reverse=True):
+                    display_name = get_user_display_name(assignee_id)
+                    lines.append(f"   • {display_name}: {count}个任务")
+
             await reply_to_message(message_id, "\n".join(lines))
             return True
 
