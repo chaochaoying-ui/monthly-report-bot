@@ -296,31 +296,27 @@ class FeishuWebSocketHandler:
             token = await self._get_tenant_token()
             if not token:
                 return None
-            
-            # 调用飞书API获取WebSocket连接URL
-            url = "https://open.feishu.cn/open-apis/ws/v2/connect"
+
+            # 调用飞书API获取WebSocket连接URL (使用v1 API)
+            url = "https://open.feishu.cn/open-apis/ws/v1/connect"
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
-            
-            payload = {
-                "app_id": self.app_id,
-                "app_secret": self.app_secret
-            }
-            
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+            # v1 API使用GET请求，不需要payload
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
-            
+
             data = response.json()
             if data.get("code", 0) == 0:
-                ws_url = data.get("data", {}).get("ws_url")
-                logger.info("获取WebSocket URL成功")
+                ws_url = data.get("data", {}).get("url")
+                logger.info("获取WebSocket URL成功: %s", ws_url)
                 return ws_url
             else:
                 logger.error("获取WebSocket URL失败: %s", data.get("msg", "未知错误"))
                 return None
-                
+
         except Exception as e:
             logger.error("获取WebSocket URL异常: %s", e)
             return None
