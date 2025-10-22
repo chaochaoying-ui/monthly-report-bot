@@ -21,23 +21,43 @@ import json
 # 设置日志
 logger = logging.getLogger(__name__)
 
-# 设置中文字体 - 优先使用 Noto Sans CJK（Ubuntu 服务器）
-try:
-    # 尝试多种中文字体
-    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK TC', 'WenQuanYi Micro Hei', 'SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
+# 设置中文字体 - 强制使用 Noto Sans CJK（Ubuntu 服务器）
+def setup_chinese_fonts():
+    """配置中文字体"""
+    try:
+        # 强制重建字体缓存
+        fm._load_fontmanager(try_read_cache=False)
 
-    # 验证字体
-    available_fonts = [f.name for f in fm.fontManager.ttflist]
-    noto_fonts = [f for f in available_fonts if 'Noto' in f and 'CJK' in f]
-    if noto_fonts:
-        logger.info(f"使用中文字体: {noto_fonts[0]}")
-    else:
-        logger.warning("未找到 Noto CJK 字体，使用系统默认字体")
-except Exception as e:
-    logger.warning(f"字体配置警告: {e}")
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
+        # 查找 Noto Sans CJK 字体文件
+        font_paths = fm.findSystemFonts(fontpaths=['/usr/share/fonts'])
+        noto_sc_fonts = [f for f in font_paths if 'NotoSansCJK' in f and 'SC' in f]
+        noto_serif_fonts = [f for f in font_paths if 'NotoSerifCJK' in f]
+
+        if noto_sc_fonts:
+            # 找到 Noto Sans CJK SC，直接添加
+            font_prop = fm.FontProperties(fname=noto_sc_fonts[0])
+            font_name = font_prop.get_name()
+            logger.info(f"找到并使用字体: {font_name} ({noto_sc_fonts[0]})")
+            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+        elif noto_serif_fonts:
+            # 使用 Noto Serif CJK 作为备选
+            font_prop = fm.FontProperties(fname=noto_serif_fonts[0])
+            font_name = font_prop.get_name()
+            logger.info(f"使用 Serif 字体: {font_name} ({noto_serif_fonts[0]})")
+            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+        else:
+            logger.warning("未找到 Noto CJK 字体文件")
+            plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK TC', 'DejaVu Sans']
+
+        plt.rcParams['axes.unicode_minus'] = False
+
+    except Exception as e:
+        logger.error(f"字体配置失败: {e}", exc_info=True)
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+        plt.rcParams['axes.unicode_minus'] = False
+
+# 执行字体配置
+setup_chinese_fonts()
 
 # 设置图表样式
 sns.set_style("whitegrid")
