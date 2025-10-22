@@ -773,8 +773,6 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
 async def upload_image(image_path: str) -> Optional[str]:
     """上传图片到飞书，返回image_key"""
     try:
-        from lark_oapi.api.im.v1 import CreateImageRequest
-
         if not os.path.exists(image_path):
             logger.error("图片文件不存在: %s", image_path)
             return None
