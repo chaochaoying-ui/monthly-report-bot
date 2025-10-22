@@ -299,7 +299,7 @@ class ChartGenerator:
     def generate_comprehensive_dashboard(self, stats: Dict[str, Any]) -> str:
         """生成美化版综合仪表板"""
         try:
-            # 用户ID到中文名映射
+            # 用户ID到中文名映射（完整版）
             user_mapping = {
                 "ou_b96c7ed4a604dc049569102d01c6c26d": "刘野",
                 "ou_07443a67428d8741eab5eac851b754b9": "范明杰",
@@ -312,6 +312,12 @@ class ChartGenerator:
                 "ou_2f93cb9407ca5a281a92d1f5a72fdf7b": "唐进",
                 "ou_d85dd7bb7625ab3e3f8b129e54934aea": "何寨",
                 "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
+                "ou_a9c22d7a23ff6dd0e3dc1a93b2763b5a": "张文康",
+                "ou_49299becc523c8d3aa1120261f1e2bcd": "李炤",
+                "ou_5199fde738bcaedd5fcf4555b0adf7a0": "孙建敏",
+                "ou_c9d7859417eb0344b310fcff095fa639": "李洪蛟",
+                "ou_0bbab538833c35081e8f5c3ef213e17e": "熊黄平",
+                "ou_9847326a1fea8db87079101775bd97a9": "王冠群",
             }
 
             # 统计已完成人员
@@ -424,18 +430,36 @@ class ChartGenerator:
                 names = [item[0] for item in sorted_users[:8]]  # 最多显示8个
                 counts = [item[1] for item in sorted_users[:8]]
 
-                # 渐变色条形图
-                colors_gradient = plt.cm.viridis(np.linspace(0.3, 0.9, len(names)))
+                # 为前三名设置特殊颜色（金银铜）
+                bar_colors = []
+                for i in range(len(names)):
+                    if i == 0:
+                        bar_colors.append('#FFD700')  # 金色
+                    elif i == 1:
+                        bar_colors.append('#C0C0C0')  # 银色
+                    elif i == 2:
+                        bar_colors.append('#CD7F32')  # 铜色
+                    else:
+                        bar_colors.append(plt.cm.Blues(0.5 + i * 0.05))  # 渐变蓝色
 
-                bars = ax3.barh(names, counts, color=colors_gradient,
-                               edgecolor='white', linewidth=2, height=0.7)
+                bars = ax3.barh(names, counts, color=bar_colors,
+                               edgecolor='white', linewidth=2, height=0.7, alpha=0.9)
 
-                # 添加数值标签
-                for i, (bar, count) in enumerate(zip(bars, counts)):
+                # 添加排名勋章和数值标签
+                medals = ['🥇', '🥈', '🥉'] + ['  '] * 5  # 前三名勋章
+                for i, (bar, count, name) in enumerate(zip(bars, counts, names)):
                     width = bar.get_width()
-                    ax3.text(width + 0.1, bar.get_y() + bar.get_height()/2,
-                            f'{count}个任务', ha='left', va='center',
-                            fontsize=11, fontweight='bold', color='#2C3E50')
+
+                    # 右侧数值标签
+                    ax3.text(width + 0.15, bar.get_y() + bar.get_height()/2,
+                            f'{medals[i]} {count}个任务', ha='left', va='center',
+                            fontsize=12, fontweight='bold', color='#2C3E50')
+
+                    # 左侧排名标记
+                    ax3.text(-0.15, bar.get_y() + bar.get_height()/2,
+                            f'#{i+1}', ha='right', va='center',
+                            fontsize=10, fontweight='bold',
+                            color='#E74C3C' if i < 3 else '#7F8C8D')
 
                 ax3.set_xlabel('完成任务数', fontsize=13, fontweight='bold', color='#34495E')
                 ax3.set_title('🏆 已完成人员排行榜 (TOP 8)', fontsize=16,
@@ -444,6 +468,10 @@ class ChartGenerator:
                 ax3.spines['right'].set_visible(False)
                 ax3.grid(axis='x', alpha=0.3, linestyle='--')
                 ax3.set_axisbelow(True)
+
+                # 调整x轴范围以容纳排名标记和标签
+                if max(counts) > 0:
+                    ax3.set_xlim(-0.5, max(counts) * 1.3)
             else:
                 ax3.text(0.5, 0.5, '暂无已完成人员数据', ha='center', va='center',
                         transform=ax3.transAxes, fontsize=14, color='#7F8C8D')

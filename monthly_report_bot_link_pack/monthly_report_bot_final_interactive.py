@@ -1838,5 +1838,3 @@ if __name__ == "__main__":
         logger.info("程序被用户中断")
     except Exception as e:
         logger.error("程序异常退出: %s", e)
-
-
