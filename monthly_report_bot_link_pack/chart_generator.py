@@ -297,88 +297,242 @@ class ChartGenerator:
             return self._generate_error_chart("图表生成失败")
     
     def generate_comprehensive_dashboard(self, stats: Dict[str, Any]) -> str:
-        """生成综合仪表板"""
+        """生成美化版综合仪表板"""
         try:
+            # 用户ID到中文名映射
+            user_mapping = {
+                "ou_b96c7ed4a604dc049569102d01c6c26d": "刘野",
+                "ou_07443a67428d8741eab5eac851b754b9": "范明杰",
+                "ou_3b14801caa065a0074c7d6db8603f288": "袁阿虎",
+                "ou_33d81ce8839d93132e4417530f60c4a9": "高雅慧",
+                "ou_17b6bee82dd946d92a322cc7dea40eb7": "马富凡",
+                "ou_03491624846d90ea22fa64177860a8cf": "刘智辉",
+                "ou_7552fdb195c3ad2c0453258fb157c12a": "成自飞",
+                "ou_f5338c49049621c36310e2215204d0be": "景晓东",
+                "ou_2f93cb9407ca5a281a92d1f5a72fdf7b": "唐进",
+                "ou_d85dd7bb7625ab3e3f8b129e54934aea": "何寨",
+                "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
+            }
+
+            # 统计已完成人员
+            completed_users = {}
+            tasks = stats.get('tasks', {})
+            for task_id, task_info in tasks.items():
+                if task_info.get('completed', False):
+                    for assignee in task_info.get('assignees', []):
+                        user_name = user_mapping.get(assignee, f"用户{assignee[:8]}")
+                        completed_users[user_name] = completed_users.get(user_name, 0) + 1
+
             # 创建子图
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
-            fig.suptitle(f'月报任务统计仪表板 - {stats.get("current_month", "")}', 
-                        fontsize=20, fontweight='bold', y=0.95)
-            
-            # 1. 任务完成情况饼图
+            fig = plt.figure(figsize=(18, 12))
+            gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
+
+            # 设置整体背景色
+            fig.patch.set_facecolor('#F8F9FA')
+
+            # 主标题
+            fig.suptitle(f'📊 月报任务统计仪表板 - {stats.get("current_month", "")}',
+                        fontsize=24, fontweight='bold', y=0.98, color='#2C3E50')
+
+            # 1. 任务完成情况饼图（左上，跨2列）
+            ax1 = fig.add_subplot(gs[0, :2])
             completed = stats.get('completed_tasks', 0)
             pending = stats.get('pending_tasks', 0)
             total = stats.get('total_tasks', 0)
-            
+
             if total > 0:
-                labels = ['已完成', '待完成']
+                labels = ['✅ 已完成', '⏳ 待完成']
                 sizes = [completed, pending]
-                colors = [self.colors['success'], self.colors['warning']]
-                
+                # 使用渐变色
+                colors = ['#2ECC71', '#F39C12']
+                explode = (0.08, 0.02)
+
                 wedges, texts, autotexts = ax1.pie(
                     sizes, labels=labels, colors=colors, autopct='%1.1f%%',
-                    startangle=90, textprops={'fontsize': 10}
+                    startangle=90, explode=explode, shadow=True,
+                    textprops={'fontsize': 13, 'weight': 'bold'},
+                    wedgeprops={'edgecolor': 'white', 'linewidth': 3}
                 )
-                ax1.set_title('任务完成情况', fontsize=14, fontweight='bold')
+
+                # 美化百分比文本
+                for autotext in autotexts:
+                    autotext.set_color('white')
+                    autotext.set_fontsize(16)
+                    autotext.set_weight('bold')
+
+                # 添加中心圆圈，制造环形图效果
+                centre_circle = plt.Circle((0, 0), 0.70, fc='white')
+                ax1.add_artist(centre_circle)
+
+                # 在中心显示完成率
+                completion_rate = stats.get('completion_rate', 0)
+                ax1.text(0, 0, f'{completion_rate}%', ha='center', va='center',
+                        fontsize=36, fontweight='bold', color='#2C3E50')
+                ax1.text(0, -0.15, '总完成率', ha='center', va='center',
+                        fontsize=14, color='#7F8C8D')
+
+                ax1.set_title('📈 任务完成情况分布', fontsize=16, fontweight='bold',
+                             pad=20, color='#34495E')
             else:
-                ax1.text(0.5, 0.5, '暂无数据', ha='center', va='center', 
-                        transform=ax1.transAxes, fontsize=12)
-                ax1.set_title('任务完成情况', fontsize=14, fontweight='bold')
-            
-            # 2. 完成率进度条
+                ax1.text(0.5, 0.5, '暂无数据', ha='center', va='center',
+                        transform=ax1.transAxes, fontsize=14)
+                ax1.set_title('任务完成情况', fontsize=16, fontweight='bold')
+
+            # 2. 关键指标卡片（右上）
+            ax2 = fig.add_subplot(gs[0, 2])
+            ax2.axis('off')
+            ax2.set_facecolor('#ECF0F1')
+
             completion_rate = stats.get('completion_rate', 0)
-            ax2.barh(0, completion_rate, color=self.colors['primary'], height=0.5)
-            ax2.set_xlim(0, 100)
-            ax2.set_ylim(-0.5, 0.5)
-            ax2.set_xlabel('完成率 (%)', fontsize=12)
-            ax2.set_title(f'总体完成率: {completion_rate}%', fontsize=14, fontweight='bold')
-            ax2.text(completion_rate/2, 0, f'{completion_rate}%', 
-                    ha='center', va='center', fontsize=16, fontweight='bold', color='white')
-            
-            # 3. 任务数量对比
-            categories = ['总任务', '已完成', '待完成']
+            status_emoji = '🎉' if completion_rate >= 90 else '✅' if completion_rate >= 70 else '⚠️' if completion_rate >= 50 else '❌'
+            status_text = '优秀' if completion_rate >= 90 else '良好' if completion_rate >= 70 else '一般' if completion_rate >= 50 else '需改进'
+            status_color = '#27AE60' if completion_rate >= 70 else '#F39C12' if completion_rate >= 50 else '#E74C3C'
+
+            metrics_text = f"""
+{status_emoji} 状态评估: {status_text}
+
+━━━━━━━━━━━━━━
+
+📊 总任务数
+   {total} 个
+
+✅ 已完成
+   {completed} 个
+
+⏳ 待完成
+   {pending} 个
+
+📈 完成率
+   {completion_rate}%
+
+🎯 目标完成率
+   100%
+            """
+
+            ax2.text(0.5, 0.5, metrics_text, transform=ax2.transAxes,
+                    fontsize=13, verticalalignment='center', ha='center',
+                    bbox=dict(boxstyle='round,pad=1.5', facecolor='white',
+                             edgecolor=status_color, linewidth=3, alpha=0.95),
+                    linespacing=1.8, family='monospace')
+
+            # 3. 已完成人员排行榜（左中，跨2列）
+            ax3 = fig.add_subplot(gs[1, :2])
+
+            if completed_users:
+                # 按完成数量排序
+                sorted_users = sorted(completed_users.items(), key=lambda x: x[1], reverse=True)
+                names = [item[0] for item in sorted_users[:8]]  # 最多显示8个
+                counts = [item[1] for item in sorted_users[:8]]
+
+                # 渐变色条形图
+                colors_gradient = plt.cm.viridis(np.linspace(0.3, 0.9, len(names)))
+
+                bars = ax3.barh(names, counts, color=colors_gradient,
+                               edgecolor='white', linewidth=2, height=0.7)
+
+                # 添加数值标签
+                for i, (bar, count) in enumerate(zip(bars, counts)):
+                    width = bar.get_width()
+                    ax3.text(width + 0.1, bar.get_y() + bar.get_height()/2,
+                            f'{count}个任务', ha='left', va='center',
+                            fontsize=11, fontweight='bold', color='#2C3E50')
+
+                ax3.set_xlabel('完成任务数', fontsize=13, fontweight='bold', color='#34495E')
+                ax3.set_title('🏆 已完成人员排行榜 (TOP 8)', fontsize=16,
+                             fontweight='bold', pad=15, color='#34495E')
+                ax3.spines['top'].set_visible(False)
+                ax3.spines['right'].set_visible(False)
+                ax3.grid(axis='x', alpha=0.3, linestyle='--')
+                ax3.set_axisbelow(True)
+            else:
+                ax3.text(0.5, 0.5, '暂无已完成人员数据', ha='center', va='center',
+                        transform=ax3.transAxes, fontsize=14, color='#7F8C8D')
+                ax3.set_title('🏆 已完成人员排行榜', fontsize=16, fontweight='bold')
+                ax3.axis('off')
+
+            # 4. 进度条可视化（右中）
+            ax4 = fig.add_subplot(gs[1, 2])
+            ax4.axis('off')
+
+            completion_rate = stats.get('completion_rate', 0)
+
+            # 绘制背景进度条
+            bar_height = 0.3
+            bar_y = 0.5
+            ax4.barh(bar_y, 100, height=bar_height, color='#ECF0F1',
+                    left=0, edgecolor='#BDC3C7', linewidth=2)
+
+            # 绘制实际进度（渐变效果）
+            if completion_rate > 0:
+                # 根据完成率选择颜色
+                if completion_rate >= 80:
+                    bar_color = '#27AE60'  # 绿色
+                elif completion_rate >= 50:
+                    bar_color = '#F39C12'  # 橙色
+                else:
+                    bar_color = '#E74C3C'  # 红色
+
+                ax4.barh(bar_y, completion_rate, height=bar_height,
+                        color=bar_color, left=0, edgecolor='white', linewidth=2,
+                        alpha=0.9)
+
+            # 添加百分比文本
+            ax4.text(50, bar_y, f'{completion_rate}%', ha='center', va='center',
+                    fontsize=20, fontweight='bold', color='white',
+                    bbox=dict(boxstyle='round,pad=0.5', facecolor='#34495E', alpha=0.8))
+
+            # 添加刻度标记
+            for i in [0, 25, 50, 75, 100]:
+                ax4.text(i, bar_y - 0.25, f'{i}%', ha='center', va='top',
+                        fontsize=9, color='#7F8C8D')
+                ax4.plot([i, i], [bar_y - 0.15, bar_y - bar_height/2],
+                        color='#BDC3C7', linewidth=1)
+
+            ax4.set_xlim(-5, 105)
+            ax4.set_ylim(0, 1)
+            ax4.set_title('📊 总体完成进度', fontsize=14, fontweight='bold',
+                         pad=20, color='#34495E')
+
+            # 5. 任务数量对比（底部，跨3列）
+            ax5 = fig.add_subplot(gs[2, :])
+
+            categories = ['📋 总任务', '✅ 已完成', '⏳ 待完成']
             values = [total, completed, pending]
-            colors_bar = [self.colors['info'], self.colors['success'], self.colors['warning']]
-            
-            bars = ax3.bar(categories, values, color=colors_bar, alpha=0.8)
-            ax3.set_ylabel('任务数量', fontsize=12)
-            ax3.set_title('任务数量统计', fontsize=14, fontweight='bold')
-            
+            colors_bar = ['#3498DB', '#2ECC71', '#F39C12']
+
+            bars = ax5.bar(categories, values, color=colors_bar, alpha=0.85,
+                          edgecolor='white', linewidth=3, width=0.6)
+
             # 添加数值标签
             for bar, value in zip(bars, values):
                 height = bar.get_height()
-                ax3.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                        f'{value}', ha='center', va='bottom', fontweight='bold')
-            
-            # 4. 关键指标
-            ax4.axis('off')
-            metrics_text = f"""
-关键指标
+                ax5.text(bar.get_x() + bar.get_width()/2., height + 0.3,
+                        f'{value}', ha='center', va='bottom',
+                        fontsize=18, fontweight='bold', color='#2C3E50')
 
-📊 总任务数: {total}
-✅ 已完成: {completed}
-⏳ 待完成: {pending}
-📈 完成率: {completion_rate}%
-🎯 目标: 100%
+            ax5.set_ylabel('任务数量', fontsize=13, fontweight='bold', color='#34495E')
+            ax5.set_title('📊 任务数量统计对比', fontsize=16, fontweight='bold',
+                         pad=15, color='#34495E')
+            ax5.spines['top'].set_visible(False)
+            ax5.spines['right'].set_visible(False)
+            ax5.grid(axis='y', alpha=0.3, linestyle='--')
+            ax5.set_axisbelow(True)
+            ax5.tick_params(labelsize=12)
 
-状态评估:
-{'🎉 优秀' if completion_rate >= 90 else '✅ 良好' if completion_rate >= 70 else '⚠️ 一般' if completion_rate >= 50 else '❌ 需改进'}
-            """
-            ax4.text(0.1, 0.9, metrics_text, transform=ax4.transAxes, 
-                    fontsize=12, verticalalignment='top',
-                    bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
-            
-            plt.tight_layout()
-            
+            # 设置y轴范围
+            if max(values) > 0:
+                ax5.set_ylim(0, max(values) * 1.2)
+
             # 保存图表
             filename = f"dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             filepath = os.path.join(self.chart_dir, filename)
-            plt.savefig(filepath, dpi=300, bbox_inches='tight', 
-                       facecolor='white', edgecolor='none')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight',
+                       facecolor='#F8F9FA', edgecolor='none')
             plt.close()
-            
-            logger.info(f"综合仪表板已生成: {filepath}")
+
+            logger.info(f"美化版综合仪表板已生成: {filepath}")
             return filepath
-            
+
         except Exception as e:
             logger.error(f"生成综合仪表板失败: {e}")
             return self._generate_error_chart("仪表板生成失败")
