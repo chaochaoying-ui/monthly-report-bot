@@ -743,7 +743,7 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
         if not lark_client:
             logger.error("客户端未初始化，无法发送消息")
             return False
-        
+
         if msg_type == "text":
             body = ReplyMessageRequestBody.builder() \
                 .msg_type("text") \
@@ -754,12 +754,12 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
                 .msg_type("interactive") \
                 .content(json.dumps(content, ensure_ascii=False)) \
                 .build()
-        
+
         request = ReplyMessageRequest.builder() \
             .message_id(message_id) \
             .request_body(body) \
             .build()
-        
+
         response = await lark_client.im.v1.message.areply(request)
         if response.code == 0 or getattr(response, "success", lambda: False)():
             logger.info("消息回复成功: %s", str(content)[:50])
@@ -769,6 +769,42 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
     except Exception as e:
         logger.error("回复消息异常: %s", e)
         return False
+
+async def upload_image(image_path: str) -> Optional[str]:
+    """上传图片到飞书，返回image_key"""
+    try:
+        from lark_oapi.api.im.v1 import CreateImageRequest
+
+        if not os.path.exists(image_path):
+            logger.error("图片文件不存在: %s", image_path)
+            return None
+
+        # 读取图片文件
+        with open(image_path, 'rb') as f:
+            image_data = f.read()
+
+        # 构建请求
+        request = CreateImageRequest.builder() \
+            .request_body(CreateImageRequestBody.builder()
+                        .image_type("message")
+                        .image(image_data)
+                        .build()) \
+            .build()
+
+        # 上传图片
+        response = await lark_client.im.v1.image.acreate(request)
+
+        if response.success():
+            image_key = response.data.image_key
+            logger.info("图片上传成功, image_key: %s", image_key)
+            return image_key
+        else:
+            logger.error("图片上传失败, code: %s, msg: %s", response.code, response.msg)
+            return None
+
+    except Exception as e:
+        logger.error("上传图片异常: %s", e)
+        return None
 
 _RE_AT_RICH = _re_cached.compile(r"<at\b[^>]*?>.*?</at>", _re_cached.IGNORECASE)
 _RE_AT_PLAIN = _re_cached.compile(r"(^|\s)@\S+")
@@ -882,50 +918,36 @@ def generate_echo_reply(text: str) -> str:
     if normalized in {"已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦"}:
         return "感谢您的辛勤工作，祝您工作愉快，后续将不再催办"
 
-    # 图表/可视化统计
-    if normalized in {"图表", "可视化", "饼图", "统计图", "图表统计", "chart", "visualization", "pie", "dashboard"}:
-        return generate_chart_response()
-
     return f"Echo: {text}"
 
-def generate_chart_response() -> str:
-    """生成图表响应"""
+def generate_chart_response() -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+    """生成图表响应，返回 (chart_path, stats) 元组"""
     try:
         # 检查是否有任务数据
         created = load_created_tasks()
         current_month = datetime.now(TZ).strftime("%Y-%m")
         if not created.get(current_month, False):
-            return "当前没有任务，无法生成图表"
-        
+            return None, None
+
         stats = get_task_completion_stats()
         if stats.get('total_tasks', 0) == 0:
-            return "当前没有任务，无法生成图表"
-        
+            return None, None
+
         # 检查图表生成器是否可用
         if chart_generator is None:
-            return "图表功能暂不可用，请检查依赖库安装"
-        
+            return None, None
+
         # 生成图表
         chart_path = chart_generator.generate_comprehensive_dashboard(stats)
-        
+
         if chart_path and os.path.exists(chart_path):
-            # 返回图表信息
-            return (
-                f"📊 统计图表已生成\n\n"
-                f"📈 当前进度（{stats['current_month']}）:\n"
-                f"- 总任务数: {stats['total_tasks']}\n"
-                f"- 已完成: {stats['completed_tasks']}\n"
-                f"- 待完成: {stats['pending_tasks']}\n"
-                f"- 完成率: {stats['completion_rate']}%\n\n"
-                f"📁 图表文件: {os.path.basename(chart_path)}\n"
-                f"💡 提示: 图表包含饼状图、进度条、用户参与度等多维度统计"
-            )
+            return chart_path, stats
         else:
-            return "图表生成失败，请稍后重试"
-            
+            return None, None
+
     except Exception as e:
         logger.error(f"生成图表响应失败: {e}")
-        return "图表生成失败，请稍后重试"
+        return None, None
 
 async def handle_message_event(event: Dict[str, Any]) -> bool:
     """处理消息事件（im.message.receive_v1）：支持“状态/未完成/谁没交”等意图与无任务判断"""
@@ -1004,6 +1026,87 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
                     lines.append(f"   • {display_name}: {count}个任务")
 
             await reply_to_message(message_id, "\n".join(lines))
+            return True
+
+        # 图表/可视化统计
+        if normalized in {"图表", "可视化", "饼图", "统计图", "图表统计", "chart", "visualization", "pie", "dashboard"}:
+            try:
+                created = load_created_tasks()
+                current_month = datetime.now(TZ).strftime("%Y-%m")
+                if not created.get(current_month, False):
+                    await reply_to_message(message_id, "当前没有任务，无法生成图表")
+                    return True
+            except Exception:
+                pass
+
+            chart_path, stats = generate_chart_response()
+
+            if chart_path and stats:
+                # 上传图表
+                image_key = await upload_image(chart_path)
+
+                if image_key:
+                    # 构建包含图片的卡片消息
+                    card_content = {
+                        "config": {
+                            "wide_screen_mode": True
+                        },
+                        "header": {
+                            "title": {
+                                "tag": "plain_text",
+                                "content": "📊 任务统计图表"
+                            },
+                            "template": "blue"
+                        },
+                        "elements": [
+                            {
+                                "tag": "div",
+                                "text": {
+                                    "tag": "lark_md",
+                                    "content": (
+                                        f"**{stats['current_month']} 月度任务进度**\n\n"
+                                        f"📈 **统计数据**:\n"
+                                        f"• 总任务数: {stats['total_tasks']}\n"
+                                        f"• 已完成: {stats['completed_tasks']}\n"
+                                        f"• 待完成: {stats['pending_tasks']}\n"
+                                        f"• 完成率: {stats['completion_rate']}%"
+                                    )
+                                }
+                            },
+                            {
+                                "tag": "img",
+                                "img_key": image_key,
+                                "alt": {
+                                    "tag": "plain_text",
+                                    "content": "任务统计图表"
+                                }
+                            },
+                            {
+                                "tag": "div",
+                                "text": {
+                                    "tag": "lark_md",
+                                    "content": "📊 **上图为综合统计仪表板**，包含任务完成情况、完成率、任务数量对比、已完成人员排行榜等多维度分析"
+                                }
+                            }
+                        ]
+                    }
+                    await reply_to_message(message_id, card_content, msg_type="interactive")
+                else:
+                    # 图片上传失败，返回文本信息
+                    await reply_to_message(
+                        message_id,
+                        f"📊 统计图表已生成，但上传失败\n\n"
+                        f"📈 当前进度（{stats['current_month']}）:\n"
+                        f"- 总任务数: {stats['total_tasks']}\n"
+                        f"- 已完成: {stats['completed_tasks']}\n"
+                        f"- 待完成: {stats['pending_tasks']}\n"
+                        f"- 完成率: {stats['completion_rate']}%"
+                    )
+            else:
+                # 图表生成失败
+                error_msg = "图表功能暂不可用，请检查依赖库安装" if chart_generator is None else "图表生成失败，请稍后重试"
+                await reply_to_message(message_id, error_msg)
+
             return True
 
         # 其它：回声/帮助等
