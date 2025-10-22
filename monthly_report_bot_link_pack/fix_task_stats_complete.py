@@ -71,7 +71,7 @@ def load_complete_task_stats():
             },
             "task_2025-10_7": {
                 "title": "月报-设计工作进展情况-机电工程",
-                "assignees": ["ou_49299becc523c8d3aa1120261f1e2bcd"],
+                "assignees": ["ou_66ef2e056d0425ac560717a8b80395c3"],
                 "category": "设计",
                 "created_at": "2025-10-17T09:00:00-03:00",
                 "completed": False,
