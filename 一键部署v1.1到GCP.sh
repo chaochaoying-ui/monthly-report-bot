@@ -101,9 +101,21 @@ for file in "${V1_1_FILES[@]}"; do
 done
 
 echo ""
-echo "检查 Python 语法..."
+echo "激活虚拟环境并安装依赖..."
 
 source venv/bin/activate
+
+echo "安装 v1.1 依赖包..."
+pip install -r requirements_v1_1.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --quiet
+
+if [ $? -eq 0 ]; then
+    echo "✅ 依赖包安装完成"
+else
+    echo "⚠️  依赖包安装可能有问题，但继续部署"
+fi
+
+echo ""
+echo "检查 Python 语法..."
 
 if python3 -m py_compile monthly_report_bot_ws_v1.1.py 2>/dev/null; then
     echo "✅ Python 语法检查通过"
