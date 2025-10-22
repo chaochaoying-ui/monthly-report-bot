@@ -257,70 +257,44 @@ class FeishuWebSocketHandler:
         """连接到飞书WebSocket服务"""
         while self.reconnect_attempts < self.max_reconnect_attempts:
             try:
-                logger.info("尝试连接到飞书WebSocket服务 (尝试 %d/%d)", 
+                logger.info("尝试连接到飞书WebSocket服务 (尝试 %d/%d)",
                           self.reconnect_attempts + 1, self.max_reconnect_attempts)
-                
-                # 获取WebSocket连接URL
-                ws_url = await self._get_websocket_url()
-                if not ws_url:
-                    logger.error("获取WebSocket URL失败")
+
+                # 获取租户令牌
+                token = await self._get_tenant_token()
+                if not token:
+                    logger.error("获取租户令牌失败")
                     return
-                
+
+                # 直接连接到飞书WebSocket端点
+                ws_url = "wss://open.feishu.cn/ws/v2"
+                headers = {
+                    "Authorization": f"Bearer {token}"
+                }
+
                 # 建立连接
-                async with websockets.connect(ws_url) as websocket:
-                    logger.info("成功连接到飞书WebSocket服务")
+                async with websockets.connect(ws_url, extra_headers=headers) as websocket:
+                    logger.info("✅ WebSocket 连接已建立")
                     self.reconnect_attempts = 0  # 重置重连计数
-                    
+
                     # 处理消息
                     async for message in websocket:
                         await self.handle_message(websocket, message)
-                        
+
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("WebSocket连接已关闭")
             except Exception as e:
                 logger.error("连接异常: %s", e)
-            
+
             # 重连延迟
             self.reconnect_attempts += 1
             if self.reconnect_attempts < self.max_reconnect_attempts:
                 delay = min(self.reconnect_delay * (2 ** (self.reconnect_attempts - 1)), 60)
                 logger.info("等待 %d 秒后重连...", delay)
                 await asyncio.sleep(delay)
-        
+
         logger.error("达到最大重连次数，停止重连")
-    
-    async def _get_websocket_url(self) -> Optional[str]:
-        """获取WebSocket连接URL"""
-        try:
-            # 获取租户访问令牌
-            token = await self._get_tenant_token()
-            if not token:
-                return None
 
-            # 调用飞书API获取WebSocket连接URL (使用v1 API)
-            url = "https://open.feishu.cn/open-apis/ws/v1/connect"
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
-
-            # v1 API使用GET请求，不需要payload
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            if data.get("code", 0) == 0:
-                ws_url = data.get("data", {}).get("url")
-                logger.info("获取WebSocket URL成功: %s", ws_url)
-                return ws_url
-            else:
-                logger.error("获取WebSocket URL失败: %s", data.get("msg", "未知错误"))
-                return None
-
-        except Exception as e:
-            logger.error("获取WebSocket URL异常: %s", e)
-            return None
-    
     async def _get_tenant_token(self) -> Optional[str]:
         """获取租户访问令牌"""
         try:
