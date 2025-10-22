@@ -1,8 +1,41 @@
-# 🚀 立即部署 - 正确的命令
+# 🚀 立即部署 - 图表上传功能
+
+## 🎯 最新更新（2025-10-22）
+
+✅ **新增功能：图表图片自动上传和展示**
+- 发送"图表"后直接显示美化的图表图片
+- 不再只显示文件名，而是在消息中直接展示
+- 包含金银铜排行榜的综合统计仪表板
 
 ## ⚠️ 注意：部署脚本位置
 
 部署脚本 `deploy_ranking_feature.sh` 在**项目根目录**，不在 `monthly_report_bot_link_pack` 子目录中。
+
+---
+
+## 🚀 快速部署（推荐）
+
+**在 GCP 服务器上执行以下命令：**
+
+```bash
+# 1. 进入项目目录
+cd ~/monthly-report-bot/monthly_report_bot_link_pack
+
+# 2. 拉取最新代码
+git pull origin main
+
+# 3. 重启服务
+sudo systemctl restart monthly-report-bot.service
+
+# 4. 检查服务状态
+sudo systemctl status monthly-report-bot.service
+
+# 5. 测试：在飞书群聊中发送"图表"
+```
+
+✅ **验证成功**：在飞书中发送"图表"，应该看到包含图表图片的卡片消息
+
+---
 
 ## ✅ 正确的部署命令
 
