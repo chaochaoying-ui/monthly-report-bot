@@ -772,20 +772,25 @@ async def reply_to_message(message_id: str, content: str, msg_type: str = "text"
 
 async def upload_image(image_path: str) -> Optional[str]:
     """上传图片到飞书，返回image_key"""
+    import io
     try:
         if not os.path.exists(image_path):
             logger.error("图片文件不存在: %s", image_path)
             return None
 
-        # 读取图片文件
+        # 读取图片文件为字节数据
         with open(image_path, 'rb') as f:
-            image_data = f.read()
+            image_bytes = f.read()
+
+        # 使用 BytesIO 包装字节数据，模拟文件对象
+        image_file = io.BytesIO(image_bytes)
+        image_file.name = os.path.basename(image_path)
 
         # 构建请求
         request = CreateImageRequest.builder() \
             .request_body(CreateImageRequestBody.builder()
                         .image_type("message")
-                        .image(image_data)
+                        .image(image_file)
                         .build()) \
             .build()
 
@@ -801,7 +806,9 @@ async def upload_image(image_path: str) -> Optional[str]:
             return None
 
     except Exception as e:
+        import traceback
         logger.error("上传图片异常: %s", e)
+        logger.error("异常堆栈: %s", traceback.format_exc())
         return None
 
 _RE_AT_RICH = _re_cached.compile(r"<at\b[^>]*?>.*?</at>", _re_cached.IGNORECASE)
