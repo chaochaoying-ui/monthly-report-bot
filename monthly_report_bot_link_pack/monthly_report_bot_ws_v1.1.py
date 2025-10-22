@@ -954,10 +954,62 @@ def generate_chart_response() -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         logger.error(f"生成图表响应失败: {e}")
         return None, None
 
+def mark_user_tasks_completed(user_id: str) -> Tuple[int, List[str]]:
+    """
+    标记某个用户的所有未完成任务为已完成
+
+    Args:
+        user_id: 用户的 open_id
+
+    Returns:
+        (完成任务数, 任务标题列表)
+    """
+    try:
+        stats = load_task_stats()
+        if not stats or "tasks" not in stats:
+            return 0, []
+
+        current_month = datetime.now(TZ).strftime("%Y-%m")
+        completed_count = 0
+        completed_titles = []
+
+        for task_id, task_info in stats["tasks"].items():
+            # 检查是否是该用户的任务且未完成
+            assignees = task_info.get("assignees", [])
+            if user_id in assignees and not task_info.get("completed", False):
+                # 标记为已完成
+                task_info["completed"] = True
+                task_info["completed_at"] = datetime.now(TZ).isoformat()
+                completed_count += 1
+                completed_titles.append(task_info.get("title", task_id))
+                logger.info(f"自动标记任务完成: {task_info.get('title')} (user: {user_id})")
+
+        if completed_count > 0:
+            # 更新统计数据
+            total_completed = sum(1 for t in stats["tasks"].values() if t.get("completed", False))
+            total_tasks = len(stats["tasks"])
+            stats["completed_tasks"] = total_completed
+            stats["completion_rate"] = round((total_completed / total_tasks) * 100, 2) if total_tasks > 0 else 0
+            stats["last_update"] = datetime.now(TZ).isoformat()
+
+            # 保存更新后的数据
+            save_task_stats(stats)
+            logger.info(f"已为用户 {user_id} 标记 {completed_count} 个任务为完成")
+
+        return completed_count, completed_titles
+
+    except Exception as e:
+        logger.error(f"标记用户任务完成失败: {e}", exc_info=True)
+        return 0, []
+
 async def handle_message_event(event: Dict[str, Any]) -> bool:
-    """处理消息事件（im.message.receive_v1）：支持“状态/未完成/谁没交”等意图与无任务判断"""
+    """处理消息事件（im.message.receive_v1）：支持"状态/未完成/谁没交"等意图与无任务判断"""
     try:
         message = event.get("message", {})
+        sender = event.get("sender", {})
+        sender_id_obj = sender.get("sender_id", {})
+        user_open_id = sender_id_obj.get("open_id", "") or sender_id_obj.get("user_id", "")
+
         content_raw = message.get("content", "")
         content: Dict[str, Any] = {}
         if isinstance(content_raw, str):
@@ -967,12 +1019,12 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
                 content = {}
         elif isinstance(content_raw, dict):
             content = content_raw
-        
+
         text = (content.get("text", "") or "").strip()
         message_id = message.get("message_id", "")
         if not text or not message_id:
             return True
-        
+
         normalized = _sanitize_command_text(text)
 
         # 未完成/谁没交 → 若当月未创建任务则直接回复“当前没有任务”
@@ -1111,6 +1163,41 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
                 # 图表生成失败
                 error_msg = "图表功能暂不可用，请检查依赖库安装" if chart_generator is None else "图表生成失败，请稍后重试"
                 await reply_to_message(message_id, error_msg)
+
+            return True
+
+        # 已完成/完成了 - 自动标记用户的任务为完成
+        if normalized in {"已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦"}:
+            if user_open_id:
+                # 标记该用户的所有未完成任务为已完成
+                completed_count, completed_titles = mark_user_tasks_completed(user_open_id)
+
+                if completed_count > 0:
+                    # 构建回复消息
+                    user_name = get_user_display_name(user_open_id)
+                    reply_lines = [
+                        f"✅ 太棒了！已为您自动标记以下任务为完成：",
+                        ""
+                    ]
+                    for i, title in enumerate(completed_titles, 1):
+                        reply_lines.append(f"{i}. {title}")
+
+                    # 获取最新统计
+                    stats = get_task_completion_stats()
+                    reply_lines.extend([
+                        "",
+                        f"📊 **最新进度**:",
+                        f"• 已完成: {stats['completed_tasks']}/{stats['total_tasks']}",
+                        f"• 完成率: {stats['completion_rate']}%",
+                        "",
+                        "🎉 感谢您的辛勤工作！后续将不再催办这些任务。"
+                    ])
+
+                    await reply_to_message(message_id, "\n".join(reply_lines))
+                else:
+                    await reply_to_message(message_id, "您当前没有未完成的任务，或者任务已经标记为完成了。")
+            else:
+                await reply_to_message(message_id, "感谢您的辛勤工作！请联系管理员手动标记任务完成。")
 
             return True
 
