@@ -1,0 +1,9 @@
+# 忽略所有字体文件
+*.ttf
+*.otf
+*.ttc
+*.woff
+*.woff2
+
+# 但保留 README.md
+!README.md

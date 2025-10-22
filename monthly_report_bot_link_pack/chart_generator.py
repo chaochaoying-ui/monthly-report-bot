@@ -21,32 +21,49 @@ import json
 # 设置日志
 logger = logging.getLogger(__name__)
 
-# 设置中文字体 - 强制使用 Noto Sans CJK（Ubuntu 服务器）
+# 设置中文字体 - 支持自定义字体文件
 def setup_chinese_fonts():
-    """配置中文字体"""
+    """配置中文字体 - 优先使用项目目录的自定义字体"""
     try:
         # 强制重建字体缓存
         fm._load_fontmanager(try_read_cache=False)
 
-        # 查找 Noto Sans CJK 字体文件
+        # 1. 首先检查项目目录的自定义字体（最高优先级）
+        custom_font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
+        custom_fonts = {
+            'simhei': os.path.join(custom_font_dir, 'simhei.ttf'),
+            'SimHei': os.path.join(custom_font_dir, 'SimHei.ttf'),
+        }
+
+        for font_name, font_path in custom_fonts.items():
+            if os.path.exists(font_path):
+                try:
+                    font_prop = fm.FontProperties(fname=font_path)
+                    plt.rcParams['font.sans-serif'] = [font_prop.get_name(), 'DejaVu Sans']
+                    plt.rcParams['axes.unicode_minus'] = False
+                    logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
+                    return
+                except Exception as e:
+                    logger.warning(f"加载自定义字体失败: {font_path}, 错误: {e}")
+
+        # 2. 如果没有自定义字体，查找系统 Noto Sans CJK 字体
         font_paths = fm.findSystemFonts(fontpaths=['/usr/share/fonts'])
         noto_sc_fonts = [f for f in font_paths if 'NotoSansCJK' in f and 'SC' in f]
         noto_serif_fonts = [f for f in font_paths if 'NotoSerifCJK' in f]
 
         if noto_sc_fonts:
-            # 找到 Noto Sans CJK SC，直接添加
             font_prop = fm.FontProperties(fname=noto_sc_fonts[0])
             font_name = font_prop.get_name()
-            logger.info(f"找到并使用字体: {font_name} ({noto_sc_fonts[0]})")
+            logger.info(f"使用系统字体: {font_name} ({noto_sc_fonts[0]})")
             plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
         elif noto_serif_fonts:
-            # 使用 Noto Serif CJK 作为备选
             font_prop = fm.FontProperties(fname=noto_serif_fonts[0])
             font_name = font_prop.get_name()
             logger.info(f"使用 Serif 字体: {font_name} ({noto_serif_fonts[0]})")
             plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
         else:
-            logger.warning("未找到 Noto CJK 字体文件")
+            logger.warning("⚠️ 未找到中文字体，中文可能显示为方框")
+            logger.warning(f"请上传字体文件到: {custom_font_dir}/simhei.ttf")
             plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK TC', 'DejaVu Sans']
 
         plt.rcParams['axes.unicode_minus'] = False
