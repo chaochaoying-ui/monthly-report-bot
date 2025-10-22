@@ -37,8 +37,8 @@ class FeishuWebSocketHandler:
         self.reconnect_delay = 1  # 初始重连延迟（秒）
         
         # 飞书应用配置
-        self.app_id = os.environ.get("APP_ID", "").strip()
-        self.app_secret = os.environ.get("APP_SECRET", "").strip()
+        self.app_id = os.environ.get("APP_ID", "cli_a8fd44a9453cd00c").strip()
+        self.app_secret = os.environ.get("APP_SECRET", "jsVoFWgaaw05en6418h7xbhV5oXxAwIm").strip()
         self.verification_token = os.environ.get("VERIFICATION_TOKEN", "").strip()
         
         # 事件处理器
