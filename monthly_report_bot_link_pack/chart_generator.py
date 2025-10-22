@@ -18,15 +18,30 @@ import numpy as np
 from collections import Counter
 import json
 
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+# 设置日志
+logger = logging.getLogger(__name__)
+
+# 设置中文字体 - 优先使用 Noto Sans CJK（Ubuntu 服务器）
+try:
+    # 尝试多种中文字体
+    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK TC', 'WenQuanYi Micro Hei', 'SimHei', 'Microsoft YaHei', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
+
+    # 验证字体
+    available_fonts = [f.name for f in fm.fontManager.ttflist]
+    noto_fonts = [f for f in available_fonts if 'Noto' in f and 'CJK' in f]
+    if noto_fonts:
+        logger.info(f"使用中文字体: {noto_fonts[0]}")
+    else:
+        logger.warning("未找到 Noto CJK 字体，使用系统默认字体")
+except Exception as e:
+    logger.warning(f"字体配置警告: {e}")
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
 
 # 设置图表样式
 sns.set_style("whitegrid")
 plt.style.use('seaborn-v0_8')
-
-logger = logging.getLogger(__name__)
 
 class ChartGenerator:
     """图表生成器"""
