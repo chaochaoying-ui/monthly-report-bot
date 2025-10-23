@@ -129,12 +129,13 @@ async def main():
 
     # 加载环境变量
     env_vars = load_env()
-    app_id = env_vars.get('FEISHU_APP_ID')
-    app_secret = env_vars.get('FEISHU_APP_SECRET')
+    app_id = env_vars.get('APP_ID') or env_vars.get('FEISHU_APP_ID')
+    app_secret = env_vars.get('APP_SECRET') or env_vars.get('FEISHU_APP_SECRET')
 
     if not app_id or not app_secret:
-        print("❌ 错误：未找到飞书应用凭证")
-        print("请检查 .env 文件中的 FEISHU_APP_ID 和 FEISHU_APP_SECRET")
+        print("错误：未找到飞书应用凭证")
+        print("请检查 .env 文件中的 APP_ID 和 APP_SECRET")
+        print("当前 .env 内容（前5个键）:", list(env_vars.keys())[:5])
         return
 
     # 初始化飞书客户端
