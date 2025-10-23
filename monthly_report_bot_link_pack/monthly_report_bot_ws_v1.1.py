@@ -1372,19 +1372,19 @@ async def main_loop():
             await asyncio.sleep(60)
 
 async def create_tasks() -> bool:
-    """创建月度报告任务（复用原有逻辑）"""
+    """创建月度报告任务（真实调用飞书API）"""
     try:
         created_tasks = load_created_tasks()
         current_month = datetime.now(TZ).strftime("%Y-%m")
-        
+
         if created_tasks.get(current_month, False):
             logger.info("本月任务已创建，跳过")
             return True
-        
+
         if not os.path.exists(TASKS_FILE):
             logger.error("任务配置文件不存在: %s", TASKS_FILE)
             return False
-        
+
         with open(TASKS_FILE, 'r', encoding='utf-8') as f:
             tasks_config = yaml.safe_load(f)
 
@@ -1396,37 +1396,88 @@ async def create_tasks() -> bool:
             logger.error("任务配置文件格式错误: 需为列表或包含 tasks 键的字典")
             return False
 
-        logger.info("开始创建月度报告任务...")
+        logger.info("开始创建月度报告任务（调用飞书API）...")
         success_count = 0
 
-        for task_config in task_list:
+        for i, task_config in enumerate(task_list):
             try:
-                task_title = task_config['title']
-                task_id = f"task_{current_month}_{success_count + 1}"
+                # 构建任务标题
+                task_title = f"{current_month} {task_config['title']}"
+
+                # 获取负责人列表
                 assignees = []
-                if 'assignee_open_id' in task_config:
+                if task_config.get('assignee_open_id'):
                     if isinstance(task_config['assignee_open_id'], list):
                         assignees = task_config['assignee_open_id']
                     else:
                         assignees = [task_config['assignee_open_id']]
+
+                # 过滤空值
                 assignees = [a for a in assignees if a and a.strip()]
-                logger.info("模拟创建任务: %s (ID: %s)", task_title, task_id)
-                update_task_completion(task_id, task_config['title'], assignees, False)
-                success_count += 1
+
+                # 计算截止时间（23号 23:59:59）
+                deadline = datetime.now(TZ).replace(day=23, hour=23, minute=59, second=59)
+                due_timestamp = int(deadline.timestamp())
+
+                # 创建任务请求
+                request = CreateTaskRequest.builder() \
+                    .request_body(CreateTaskRequestBody.builder()
+                                .summary(task_title)
+                                .description(f"月度报告任务: {task_config['title']}\n文档链接: {task_config.get('doc_url', '')}")
+                                .due(CreateTaskRequestBodyDue.builder()
+                                    .timestamp(str(due_timestamp))
+                                    .is_all_day(False)
+                                    .build())
+                                .origin(CreateTaskRequestBodyOrigin.builder()
+                                       .platform_i18n_key("feishu")
+                                       .href(task_config.get('doc_url', ''))
+                                       .build())
+                                .build()) \
+                    .build()
+
+                response = await lark_client.task.v2.task.acreate(request)
+
+                if response.success():
+                    task_guid = response.data.task.guid
+                    logger.info("✅ 任务创建成功: %s (GUID: %s)", task_title, task_guid)
+
+                    # 如果有负责人，分配任务
+                    if assignees:
+                        assignee_request = CreateTaskCollaboratorRequest.builder() \
+                            .task_guid(task_guid) \
+                            .request_body(CreateTaskCollaboratorRequestBody.builder()
+                                        .id_list(assignees)
+                                        .build()) \
+                            .build()
+
+                        assignee_response = await lark_client.task.v2.task_collaborator.acreate(assignee_request)
+                        if assignee_response.success():
+                            logger.info("✅ 任务分配成功: %s -> %s", task_title, assignees)
+                        else:
+                            logger.warning("⚠️ 任务分配失败: %s", assignee_response.msg)
+
+                    # 更新统计（使用真实的 task_guid）
+                    update_task_completion(task_guid, task_config['title'], assignees, False)
+                    success_count += 1
+
+                else:
+                    logger.error("❌ 任务创建失败: %s, code: %s, msg: %s",
+                               task_title, response.code, response.msg)
+
             except Exception as e:
-                logger.error("创建任务异常: %s, 任务: %s", e, task_config.get('title', 'Unknown'))
-        
+                logger.error("❌ 创建任务异常: %s, 任务: %s", e, task_config.get('title', 'Unknown'))
+
         if success_count > 0:
             created_tasks[current_month] = True
             save_created_tasks(created_tasks)
-            logger.info("本月任务创建完成，成功创建 %d 个任务", success_count)
+            logger.info("✅ 本月任务创建完成，成功创建 %d 个任务", success_count)
             return True
         else:
-            logger.error("没有成功创建任何任务")
+            logger.error("❌ 没有成功创建任何任务")
             return False
-            
+
     except Exception as e:
-        logger.error("创建任务异常: %s", e)
+        logger.error("❌ 创建任务异常: %s", e)
         return False
 
 # ---------------------- 任务记录文件 ----------------------
