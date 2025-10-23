@@ -169,7 +169,7 @@ async def create_tasks():
                                 .is_all_day(False)
                                 .build())
                             .origin(Origin.builder()
-                                   .platform_i18n_key("feishu")
+                                   .platform_i18n_name("feishu")
                                    .href(task_config.get('doc_url', ''))
                                    .build())
                             .build()) \
