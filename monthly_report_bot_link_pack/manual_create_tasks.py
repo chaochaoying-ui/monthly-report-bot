@@ -55,7 +55,13 @@ def load_tasks_config():
     try:
         with open(TASKS_YAML_FILE, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
-            return config.get('tasks', [])
+            # tasks.yaml 直接是一个列表，不是字典
+            if isinstance(config, list):
+                return config
+            elif isinstance(config, dict):
+                return config.get('tasks', [])
+            else:
+                return []
     except Exception as e:
         print(f"❌ 加载任务配置失败: {e}")
         return []
