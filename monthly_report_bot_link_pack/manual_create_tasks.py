@@ -159,16 +159,16 @@ async def create_tasks():
             if assignees:
                 print(f"     负责人: {len(assignees)} 人")
 
-            # 创建任务请求
+            # 创建任务请求 - 使用正确的 API (InputTask, Due, Origin)
             request = CreateTaskRequest.builder() \
-                .request_body(CreateTaskRequestBody.builder()
+                .request_body(InputTask.builder()
                             .summary(task_title)
                             .description(f"月度报告任务: {task_config['title']}\n文档链接: {task_config.get('doc_url', '')}")
-                            .due(CreateTaskRequestBodyDue.builder()
+                            .due(Due.builder()
                                 .timestamp(str(due_timestamp))
                                 .is_all_day(False)
                                 .build())
-                            .origin(CreateTaskRequestBodyOrigin.builder()
+                            .origin(Origin.builder()
                                    .platform_i18n_key("feishu")
                                    .href(task_config.get('doc_url', ''))
                                    .build())
