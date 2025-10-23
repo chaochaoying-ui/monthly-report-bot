@@ -159,39 +159,41 @@ async def create_tasks():
             if assignees:
                 print(f"     负责人: {len(assignees)} 人")
 
-            # 创建任务请求 - 使用正确的 API (InputTask, Due)
-            request = CreateTaskRequest.builder() \
-                .request_body(InputTask.builder()
-                            .summary(task_title)
+            # 创建任务请求 - 使用正确的 API (InputTask, Due, Member)
+            # 准备成员列表
+            members_list = []
+            if assignees:
+                for assignee_id in assignees:
+                    member = Member.builder() \
+                        .id(assignee_id) \
+                        .role("assignee") \
+                        .build()
+                    members_list.append(member)
+
+            task_builder = InputTask.builder() \
+                            .summary(task_title) \
                             .description(f"月度报告任务: {task_config['title']}\n文档链接: {task_config.get('doc_url', '')}")
-                            .due(Due.builder()
+
+            # 添加截止时间
+            task_builder = task_builder.due(Due.builder()
                                 .timestamp(str(due_timestamp))
                                 .is_all_day(False)
                                 .build())
-                            .build()) \
+
+            # 如果有负责人，添加成员
+            if members_list:
+                task_builder = task_builder.members(members_list)
+
+            request = CreateTaskRequest.builder() \
+                .request_body(task_builder.build()) \
                 .build()
 
             response = await lark_client.task.v2.task.acreate(request)
 
             if response.success():
                 task_guid = response.data.task.guid
-                print(f"     ✅ 任务创建成功")
+                print(f"     ✅ 任务创建成功（含负责人分配）")
                 print(f"     GUID: {task_guid}")
-
-                # 如果有负责人，分配任务
-                if assignees:
-                    assignee_request = CreateTaskCollaboratorRequest.builder() \
-                        .task_guid(task_guid) \
-                        .request_body(CreateTaskCollaboratorRequestBody.builder()
-                                    .id_list(assignees)
-                                    .build()) \
-                        .build()
-
-                    assignee_response = await lark_client.task.v2.task_collaborator.acreate(assignee_request)
-                    if assignee_response.success():
-                        print(f"     ✅ 任务分配成功")
-                    else:
-                        print(f"     ⚠️ 任务分配失败: {assignee_response.msg}")
 
                 # 更新统计（使用真实的 task_guid）
                 update_task_completion(task_guid, task_config['title'], assignees, False)
