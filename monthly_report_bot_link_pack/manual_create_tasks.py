@@ -20,6 +20,7 @@ load_dotenv()
 try:
     import lark_oapi as lark
     from lark_oapi.api.task.v2 import *
+    from lark_oapi.api.task.v2.model import *
 except ImportError:
     print("❌ 错误: 未安装 lark-oapi")
     print("请运行: pip install lark-oapi")
