@@ -138,10 +138,11 @@ async def main():
         print("当前 .env 内容（前5个键）:", list(env_vars.keys())[:5])
         return
 
-    # 初始化飞书客户端
+    # 初始化飞书客户端 (添加log_level避免认证问题)
     client = lark.Client.builder() \
         .app_id(app_id) \
         .app_secret(app_secret) \
+        .log_level(lark.LogLevel.ERROR) \
         .build()
 
     # 加载当前task_stats
