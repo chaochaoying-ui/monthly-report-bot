@@ -39,7 +39,8 @@ def setup_chinese_fonts():
             if os.path.exists(font_path):
                 try:
                     font_prop = fm.FontProperties(fname=font_path)
-                    plt.rcParams['font.sans-serif'] = [font_prop.get_name(), 'DejaVu Sans']
+                    # 添加 emoji 字体支持
+                    plt.rcParams['font.sans-serif'] = [font_prop.get_name(), 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
                     plt.rcParams['axes.unicode_minus'] = False
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
                     return
@@ -58,17 +59,18 @@ def setup_chinese_fonts():
             font_prop = fm.FontProperties(fname=simhei_fonts[0])
             font_name = font_prop.get_name()
             logger.info(f"使用 SimHei 字体: {font_name} ({simhei_fonts[0]})")
-            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+            # 添加 Symbola 和 Noto Color Emoji 作为 emoji 支持的后备字体
+            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
         elif noto_sc_fonts:
             font_prop = fm.FontProperties(fname=noto_sc_fonts[0])
             font_name = font_prop.get_name()
             logger.info(f"使用 Noto Sans CJK 字体: {font_name} ({noto_sc_fonts[0]})")
-            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
         elif noto_serif_fonts:
             font_prop = fm.FontProperties(fname=noto_serif_fonts[0])
             font_name = font_prop.get_name()
             logger.info(f"使用 Serif 字体: {font_name} ({noto_serif_fonts[0]})")
-            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
         else:
             logger.warning("⚠️ 未找到中文字体，中文可能显示为方框")
             logger.warning(f"请上传字体文件到: {custom_font_dir}/simhei.ttf")
