@@ -46,15 +46,23 @@ def setup_chinese_fonts():
                 except Exception as e:
                     logger.warning(f"加载自定义字体失败: {font_path}, 错误: {e}")
 
-        # 2. 如果没有自定义字体，查找系统 Noto Sans CJK 字体
+        # 2. 如果没有自定义字体，查找系统中文字体
         font_paths = fm.findSystemFonts(fontpaths=['/usr/share/fonts'])
+        
+        # 优先查找 SimHei（黑体）
+        simhei_fonts = [f for f in font_paths if 'simhei' in f.lower() or 'SimHei' in f]
         noto_sc_fonts = [f for f in font_paths if 'NotoSansCJK' in f and 'SC' in f]
         noto_serif_fonts = [f for f in font_paths if 'NotoSerifCJK' in f]
 
-        if noto_sc_fonts:
+        if simhei_fonts:
+            font_prop = fm.FontProperties(fname=simhei_fonts[0])
+            font_name = font_prop.get_name()
+            logger.info(f"使用 SimHei 字体: {font_name} ({simhei_fonts[0]})")
+            plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
+        elif noto_sc_fonts:
             font_prop = fm.FontProperties(fname=noto_sc_fonts[0])
             font_name = font_prop.get_name()
-            logger.info(f"使用系统字体: {font_name} ({noto_sc_fonts[0]})")
+            logger.info(f"使用 Noto Sans CJK 字体: {font_name} ({noto_sc_fonts[0]})")
             plt.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
         elif noto_serif_fonts:
             font_prop = fm.FontProperties(fname=noto_serif_fonts[0])
