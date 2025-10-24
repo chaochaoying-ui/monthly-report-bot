@@ -144,11 +144,14 @@ setup_chinese_fonts()
 
 class ChartGenerator:
     """图表生成器"""
-    
+
     def __init__(self):
+        # 立即配置字体（在任何图表生成之前）
+        setup_chinese_fonts()
+
         self.chart_dir = "charts"
         self.ensure_chart_dir()
-        
+
         # 设置颜色主题
         self.colors = {
             'primary': '#2E86AB',      # 主色调 - 蓝色
