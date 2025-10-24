@@ -25,8 +25,14 @@ logger = logging.getLogger(__name__)
 def setup_chinese_fonts():
     """配置中文字体 - 优先使用项目目录的自定义字体"""
     try:
-        # 强制重建字体缓存
-        fm._load_fontmanager(try_read_cache=False)
+        logger.info("===== 开始配置中文和 emoji 字体 =====")
+
+        # 强制重建字体缓存（兼容不同版本的 matplotlib）
+        try:
+            fm._load_fontmanager(try_read_cache=False)
+            logger.info("字体缓存已重建")
+        except (TypeError, AttributeError) as e:
+            logger.info(f"跳过字体缓存重建: {e}")
 
         # 1. 首先检查项目目录的自定义字体（最高优先级）
         custom_font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -119,9 +125,10 @@ def setup_chinese_fonts():
             plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK TC', 'DejaVu Sans']
 
         plt.rcParams['axes.unicode_minus'] = False
+        logger.info("===== 字体配置完成 =====")
 
     except Exception as e:
-        logger.error(f"字体配置失败: {e}", exc_info=True)
+        logger.error(f"❌ 字体配置失败: {e}", exc_info=True)
         plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
 
