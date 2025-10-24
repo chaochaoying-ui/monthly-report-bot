@@ -3,8 +3,8 @@
 > **使用说明**: 每次开发、部署、修复问题前，**必须先阅读本文档**！
 > 这里记录了所有踩过的坑和正确的解决方案。避免重复犯错。
 
-**最后更新**: 2025-10-23
-**版本**: v1.0
+**最后更新**: 2025-10-24
+**版本**: v1.1
 
 ---
 
@@ -1100,6 +1100,134 @@ sudo systemctl restart systemd-journald
 - [飞书开放平台文档](https://open.feishu.cn/document/)
 - [任务API v2 文档](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/task-v2/task/overview)
 - [lark-oapi SDK](https://github.com/larksuite/oapi-sdk-python)
+
+---
+
+### ❌ 坑 #6.3: matplotlib 样式覆盖字体配置
+
+**问题描述**:
+设置了中文字体后，图表中的中文仍然显示为方块乱码。
+
+**影响**:
+- ❌ 图表标题、标签中文显示异常
+- ❌ 用户体验差
+
+**根本原因**:
+```python
+# chart_generator.py
+setup_chinese_fonts()  # Line 85 - 设置 SimHei 字体
+sns.set_style("whitegrid")  # Line 88
+plt.style.use('seaborn-v0_8')  # Line 89 - ❌ 覆盖了字体配置！
+```
+
+`plt.style.use()` 会重置 matplotlib 的所有 rcParams，包括字体设置。导致之前配置的 SimHei 字体失效，回退到 DejaVu Sans。
+
+**日志证据**:
+```
+INFO:chart_generator:✅ 使用自定义字体: simhei  # 字体加载成功
+UserWarning: Glyph 20219 (\N{CJK UNIFIED IDEOGRAPH-4EFB}) missing from font(s) DejaVu Sans  # 但实际使用 DejaVu Sans
+```
+
+**✅ 正确做法**:
+在样式设置**之后**重新应用字体配置：
+
+```python
+# chart_generator.py
+
+# 执行字体配置
+setup_chinese_fonts()
+
+# 设置图表样式
+sns.set_style("whitegrid")
+plt.style.use('seaborn-v0_8')
+
+# 重新应用字体配置（样式可能会覆盖）
+setup_chinese_fonts()  # ✅ 关键：再次调用确保字体生效
+```
+
+**关键点**:
+1. ✅ `plt.style.use()` 会重置字体配置
+2. ✅ 必须在 style.use() **之后**再次调用字体配置
+3. ✅ 清除 matplotlib 缓存: `rm -rf ~/.cache/matplotlib`
+4. ✅ 验证方法：检查日志中是否有 "missing from font(s) DejaVu Sans"
+
+**相关提交**:
+- `3478da5` - fix: 重新应用字体配置防止样式覆盖
+
+**修复时间**: 2025-10-24
+**严重程度**: 🔴 高 - 导致核心功能显示异常
+
+---
+
+### ❌ 坑 #6.4: SimHei 字体不支持 Emoji
+
+**问题描述**:
+图表中的 emoji 字符（🏆🥇🥈📊📈）显示为方块乱码，但普通中文显示正常。
+
+**影响**:
+- ❌ 任务完成排名的奖牌 emoji 无法显示
+- ❌ 图表装饰性图标显示异常
+- ❌ 部分UI元素缺失
+
+**根本原因**:
+SimHei (黑体) 字体只包含中文字符，**不包含 emoji 字符**。
+
+**日志证据**:
+```
+UserWarning: Glyph 127942 (\N{TROPHY}) missing from font(s) SimHei
+UserWarning: Glyph 128202 (\N{BAR CHART}) missing from font(s) SimHei
+UserWarning: Glyph 9989 (\N{WHITE HEAVY CHECK MARK}) missing from font(s) SimHei
+```
+
+**用户反馈**:
+> "我红色圈出来那一部分乱码，原来应该要显示完成任务排名的金牌、银牌的。现在显示的乱码"
+
+**✅ 正确做法**:
+配置字体回退链，添加 emoji 字体支持：
+
+```python
+# chart_generator.py
+
+if simhei_fonts:
+    font_prop = fm.FontProperties(fname=simhei_fonts[0])
+    font_name = font_prop.get_name()
+    logger.info(f"使用 SimHei 字体: {font_name}")
+    # 添加 emoji 字体作为后备
+    plt.rcParams['font.sans-serif'] = [
+        font_name,           # 中文使用 SimHei
+        'Symbola',           # emoji 使用 Symbola
+        'Noto Color Emoji',  # 或 Noto Color Emoji
+        'DejaVu Sans'        # 最后的后备字体
+    ]
+```
+
+**字体优先级**:
+1. **SimHei** - 处理中文字符 (✅ 中文)
+2. **Symbola** - 处理 emoji 和符号 (✅ 🏆📊)
+3. **Noto Color Emoji** - 彩色 emoji 支持
+4. **DejaVu Sans** - 英文和数字
+
+**关键点**:
+1. ✅ 单个字体无法同时支持中文和 emoji
+2. ✅ 使用字体回退链 (font fallback chain)
+3. ✅ 确保服务器安装了 emoji 字体: `apt install fonts-symbola`
+4. ✅ 清除 matplotlib 缓存后测试
+
+**验证方法**:
+```bash
+# 检查系统是否有 emoji 字体
+fc-list | grep -i symbola
+fc-list | grep -i emoji
+
+# 请求新图表测试
+# 在飞书发送: @月报收集系统 图表
+```
+
+**相关提交**:
+- `095bfb9` - fix: 添加 emoji 字体支持解决图表中 emoji 乱码问题
+
+**修复时间**: 2025-10-24
+**严重程度**: 🟡 中等 - 影响视觉效果和用户体验
 
 ---
 
