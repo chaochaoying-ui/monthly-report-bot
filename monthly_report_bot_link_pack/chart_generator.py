@@ -88,6 +88,9 @@ setup_chinese_fonts()
 sns.set_style("whitegrid")
 plt.style.use('seaborn-v0_8')
 
+# 重新应用字体配置（样式可能会覆盖）
+setup_chinese_fonts()
+
 class ChartGenerator:
     """图表生成器"""
     
