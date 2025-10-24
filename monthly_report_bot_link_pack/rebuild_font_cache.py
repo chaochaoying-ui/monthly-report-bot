@@ -2,8 +2,10 @@
 """强制重建 matplotlib 字体缓存"""
 
 import matplotlib.font_manager as fm
+import matplotlib
 import os
 import shutil
+from pathlib import Path
 
 print("=" * 60)
 print("重建 Matplotlib 字体缓存")
@@ -11,7 +13,13 @@ print("=" * 60)
 
 # 1. 显示当前缓存信息
 print("\n1. 当前字体缓存信息:")
-cache_dir = fm.get_cachedir()
+# 尝试不同的方法获取缓存目录
+try:
+    cache_dir = matplotlib.get_cachedir()
+except AttributeError:
+    # 如果没有 get_cachedir，使用默认路径
+    cache_dir = Path.home() / '.cache' / 'matplotlib'
+
 print(f"   缓存目录: {cache_dir}")
 
 if os.path.exists(cache_dir):
@@ -32,10 +40,22 @@ else:
 print("\n3. 重建字体缓存...")
 try:
     # 这会触发字体缓存重建
-    fm._load_fontmanager(try_read_cache=False)
+    try:
+        # 新版本 matplotlib API
+        fm._load_fontmanager(try_read_cache=False)
+    except TypeError:
+        # 旧版本 matplotlib API
+        fm._rebuild()
     print("   ✅ 字体缓存重建完成")
 except Exception as e:
-    print(f"   ❌ 重建失败: {e}")
+    print(f"   ⚠️  重建警告: {e}")
+    print("   尝试直接重新加载字体管理器...")
+    try:
+        # 强制创建新的字体管理器
+        fm.fontManager = fm.FontManager()
+        print("   ✅ 字体管理器重新创建完成")
+    except Exception as e2:
+        print(f"   ❌ 重建失败: {e2}")
 
 # 3. 显示新的缓存信息
 print("\n4. 新的字体缓存信息:")
