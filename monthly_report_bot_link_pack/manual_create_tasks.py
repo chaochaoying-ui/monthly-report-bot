@@ -49,6 +49,7 @@ print("✅ 飞书客户端初始化成功")
 # 任务配置文件
 TASKS_YAML_FILE = "tasks.yaml"
 TASK_STATS_FILE = "task_stats.json"
+CREATED_TASKS_FILE = "created_tasks.json"
 
 def load_tasks_config():
     """加载任务配置"""
@@ -67,6 +68,25 @@ def load_tasks_config():
         print(f"❌ 加载任务配置失败: {e}")
         return []
 
+
+def load_created_tasks():
+    """加载已创建任务记录"""
+    try:
+        if os.path.exists(CREATED_TASKS_FILE):
+            with open(CREATED_TASKS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"❌ 加载created_tasks失败: {e}")
+        return {}
+
+def save_created_tasks(created_tasks):
+    """保存已创建任务记录"""
+    try:
+        with open(CREATED_TASKS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(created_tasks, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"❌ 保存created_tasks失败: {e}")
 def update_task_completion(task_id: str, title: str, assignees: list, completed: bool):
     """更新任务完成状态"""
     try:
@@ -223,6 +243,14 @@ async def create_tasks():
             print(f"  - 已完成: {stats['completed_tasks']}")
             print(f"  - 待完成: {stats['total_tasks'] - stats['completed_tasks']}")
             print(f"  - 完成率: {stats['completion_rate']}%")
+
+
+        # Mark tasks as created
+        created_tasks = load_created_tasks()
+        created_tasks[current_month] = True
+        save_created_tasks(created_tasks)
+        print("Tasks marked as created")
+
 
         return True
     else:
