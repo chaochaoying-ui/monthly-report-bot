@@ -35,42 +35,84 @@ def setup_chinese_fonts():
             'SimHei': os.path.join(custom_font_dir, 'SimHei.ttf'),
         }
 
+        # 收集所有需要的字体路径
+        font_list = []
+        emoji_font_paths = []
+
+        # 查找 emoji 字体
+        symbola_path = '/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf'
+        noto_emoji_path = '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf'
+
+        if os.path.exists(symbola_path):
+            emoji_font_paths.append(symbola_path)
+            logger.info(f"找到 Symbola 字体: {symbola_path}")
+        if os.path.exists(noto_emoji_path):
+            emoji_font_paths.append(noto_emoji_path)
+            logger.info(f"找到 Noto Color Emoji 字体: {noto_emoji_path}")
+
         for font_name, font_path in custom_fonts.items():
             if os.path.exists(font_path):
                 try:
+                    # 注册中文字体
                     font_prop = fm.FontProperties(fname=font_path)
-                    # 添加 emoji 字体支持
-                    plt.rcParams['font.sans-serif'] = [font_prop.get_name(), 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
+                    chinese_font_name = font_prop.get_name()
+                    font_list.append(chinese_font_name)
+
+                    # 注册 emoji 字体
+                    for emoji_path in emoji_font_paths:
+                        try:
+                            emoji_prop = fm.FontProperties(fname=emoji_path)
+                            emoji_font_name = emoji_prop.get_name()
+                            font_list.append(emoji_font_name)
+                        except Exception as e:
+                            logger.warning(f"加载 emoji 字体失败: {emoji_path}, {e}")
+
+                    # 添加后备字体
+                    font_list.append('DejaVu Sans')
+
+                    plt.rcParams['font.sans-serif'] = font_list
                     plt.rcParams['axes.unicode_minus'] = False
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
+                    logger.info(f"✅ 字体列表: {font_list}")
                     return
                 except Exception as e:
                     logger.warning(f"加载自定义字体失败: {font_path}, 错误: {e}")
 
         # 2. 如果没有自定义字体，查找系统中文字体
         font_paths = fm.findSystemFonts(fontpaths=['/usr/share/fonts'])
-        
+
         # 优先查找 SimHei（黑体）
         simhei_fonts = [f for f in font_paths if 'simhei' in f.lower() or 'SimHei' in f]
         noto_sc_fonts = [f for f in font_paths if 'NotoSansCJK' in f and 'SC' in f]
         noto_serif_fonts = [f for f in font_paths if 'NotoSerifCJK' in f]
 
+        chinese_font = None
         if simhei_fonts:
-            font_prop = fm.FontProperties(fname=simhei_fonts[0])
-            font_name = font_prop.get_name()
-            logger.info(f"使用 SimHei 字体: {font_name} ({simhei_fonts[0]})")
-            # 添加 Symbola 和 Noto Color Emoji 作为 emoji 支持的后备字体
-            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
+            chinese_font = simhei_fonts[0]
         elif noto_sc_fonts:
-            font_prop = fm.FontProperties(fname=noto_sc_fonts[0])
-            font_name = font_prop.get_name()
-            logger.info(f"使用 Noto Sans CJK 字体: {font_name} ({noto_sc_fonts[0]})")
-            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
+            chinese_font = noto_sc_fonts[0]
         elif noto_serif_fonts:
-            font_prop = fm.FontProperties(fname=noto_serif_fonts[0])
+            chinese_font = noto_serif_fonts[0]
+
+        if chinese_font:
+            font_prop = fm.FontProperties(fname=chinese_font)
             font_name = font_prop.get_name()
-            logger.info(f"使用 Serif 字体: {font_name} ({noto_serif_fonts[0]})")
-            plt.rcParams['font.sans-serif'] = [font_name, 'Symbola', 'Noto Color Emoji', 'DejaVu Sans']
+            font_list = [font_name]
+
+            # 添加 emoji 字体
+            for emoji_path in emoji_font_paths:
+                try:
+                    emoji_prop = fm.FontProperties(fname=emoji_path)
+                    emoji_font_name = emoji_prop.get_name()
+                    font_list.append(emoji_font_name)
+                except Exception as e:
+                    logger.warning(f"加载 emoji 字体失败: {emoji_path}, {e}")
+
+            font_list.append('DejaVu Sans')
+
+            plt.rcParams['font.sans-serif'] = font_list
+            logger.info(f"使用系统字体: {font_name} ({chinese_font})")
+            logger.info(f"✅ 字体列表: {font_list}")
         else:
             logger.warning("⚠️ 未找到中文字体，中文可能显示为方框")
             logger.warning(f"请上传字体文件到: {custom_font_dir}/simhei.ttf")
