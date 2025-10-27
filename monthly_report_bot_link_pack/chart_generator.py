@@ -177,6 +177,9 @@ class ChartGenerator:
     def generate_task_completion_pie_chart(self, stats: Dict[str, Any]) -> str:
         """生成任务完成情况饼状图"""
         try:
+            # 确保字体配置在每次生成图表前都被应用
+            setup_chinese_fonts()
+
             # 准备数据
             completed = stats.get('completed_tasks', 0)
             pending = stats.get('pending_tasks', 0)
@@ -248,6 +251,9 @@ class ChartGenerator:
     def generate_user_participation_chart(self, stats: Dict[str, Any]) -> str:
         """生成用户参与度图表"""
         try:
+            # 确保字体配置在每次生成图表前都被应用
+            setup_chinese_fonts()
+
             # 从任务统计中提取用户数据
             tasks = stats.get('tasks', {})
             user_stats = {}
@@ -339,6 +345,9 @@ class ChartGenerator:
     def generate_progress_trend_chart(self, stats: Dict[str, Any]) -> str:
         """生成进度趋势图"""
         try:
+            # 确保字体配置在每次生成图表前都被应用
+            setup_chinese_fonts()
+
             # 模拟进度趋势数据（实际应用中可以从历史数据获取）
             current_rate = stats.get('completion_rate', 0)
             total_tasks = stats.get('total_tasks', 0)
@@ -416,6 +425,9 @@ class ChartGenerator:
     def generate_comprehensive_dashboard(self, stats: Dict[str, Any]) -> str:
         """生成美化版综合仪表板"""
         try:
+            # 确保字体配置在每次生成图表前都被应用
+            setup_chinese_fonts()
+
             # 用户ID到中文名映射（完整版）
             user_mapping = {
                 "ou_b96c7ed4a604dc049569102d01c6c26d": "刘野",
