@@ -64,14 +64,14 @@ def setup_chinese_fonts():
                     chinese_font_name = font_prop.get_name()
                     font_list.append(chinese_font_name)
 
-                    # 注册 emoji 字体
-                    for emoji_path in emoji_font_paths:
+                    # 注册 Symbola emoji 字体（优先使用，跳过Noto Color Emoji）
+                    if os.path.exists(symbola_path):
                         try:
-                            emoji_prop = fm.FontProperties(fname=emoji_path)
-                            emoji_font_name = emoji_prop.get_name()
-                            font_list.append(emoji_font_name)
+                            fm.fontManager.addfont(symbola_path)
+                            font_list.append('Symbola')
+                            logger.info(f"✅ 成功加载 Symbola emoji 字体")
                         except Exception as e:
-                            logger.warning(f"加载 emoji 字体失败: {emoji_path}, {e}")
+                            logger.warning(f"加载 Symbola 字体失败: {e}")
 
                     # 添加后备字体
                     font_list.append('DejaVu Sans')
@@ -105,14 +105,14 @@ def setup_chinese_fonts():
             font_name = font_prop.get_name()
             font_list = [font_name]
 
-            # 添加 emoji 字体
-            for emoji_path in emoji_font_paths:
+            # 添加 Symbola emoji 字体（优先使用，跳过Noto Color Emoji）
+            if os.path.exists(symbola_path):
                 try:
-                    emoji_prop = fm.FontProperties(fname=emoji_path)
-                    emoji_font_name = emoji_prop.get_name()
-                    font_list.append(emoji_font_name)
+                    fm.fontManager.addfont(symbola_path)
+                    font_list.append('Symbola')
+                    logger.info(f"✅ 成功加载 Symbola emoji 字体")
                 except Exception as e:
-                    logger.warning(f"加载 emoji 字体失败: {emoji_path}, {e}")
+                    logger.warning(f"加载 Symbola 字体失败: {e}")
 
             font_list.append('DejaVu Sans')
 
