@@ -76,7 +76,11 @@ def setup_chinese_fonts():
                     # 添加后备字体
                     font_list.append('DejaVu Sans')
 
+                    # 配置所有字体族，确保 emoji 在任何情况下都能显示
                     plt.rcParams['font.sans-serif'] = font_list
+                    plt.rcParams['font.serif'] = font_list
+                    plt.rcParams['font.monospace'] = font_list  # 关键：很多图表标签用 monospace
+                    plt.rcParams['font.family'] = 'sans-serif'
                     plt.rcParams['axes.unicode_minus'] = False
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
                     logger.info(f"✅ 字体列表: {font_list}")
@@ -116,7 +120,11 @@ def setup_chinese_fonts():
 
             font_list.append('DejaVu Sans')
 
+            # 配置所有字体族，确保 emoji 在任何情况下都能显示
             plt.rcParams['font.sans-serif'] = font_list
+            plt.rcParams['font.serif'] = font_list
+            plt.rcParams['font.monospace'] = font_list  # 关键：很多图表标签用 monospace
+            plt.rcParams['font.family'] = 'sans-serif'
             logger.info(f"使用系统字体: {font_name} ({chinese_font})")
             logger.info(f"✅ 字体列表: {font_list}")
         else:
