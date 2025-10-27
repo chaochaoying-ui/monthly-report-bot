@@ -1231,6 +1231,105 @@ fc-list | grep -i emoji
 
 ---
 
+### ❌ 坑 #6.5: setup_chinese_fonts() 在模块导入时调用但配置未在图表渲染时生效
+
+**问题描述**:
+尽管已经配置了 Symbola emoji 字体回退链（坑 #6.4），并在模块导入时调用了 `setup_chinese_fonts()`，但图表渲染时 emoji 仍然显示为方块，日志中仍然显示 "Glyph ... missing from font(s) SimHei"。
+
+**影响**:
+- ❌ 排名奖牌 emoji (🥇🥈🥉) 显示为方块
+- ❌ 所有图表装饰性 emoji 异常
+- ❌ 尽管多次清除 matplotlib 缓存和重启服务仍然无效
+
+**根本原因**:
+`setup_chinese_fonts()` 只在以下两个时机被调用：
+1. 模块导入时（chart_generator.py 顶层代码）
+2. ChartGenerator.__init__() 初始化时
+
+但这两个调用都发生在**实际图表渲染之前**，字体配置在后续的 matplotlib 操作中可能被重置或不生效。
+
+**日志证据**:
+```bash
+# 服务启动时看不到任何字体配置日志
+sudo journalctl -u monthly-report-bot -n 50
+# 没有 "开始配置中文和 emoji 字体" 的输出
+
+# 图表生成时仍然显示字体缺失
+Oct 27 19:16:26 monthly-report-bot python3[696879]: UserWarning: Glyph 127942 (\N{TROPHY}) missing from font(s) SimHei.
+Oct 27 19:16:26 monthly-report-bot python3[696879]: UserWarning: Glyph 128202 (\N{BAR CHART}) missing from font(s) SimHei.
+```
+
+**用户反馈**:
+> "图表右侧排名勋章（🥇🥈🥉）显示乱码的问题。还未解决"
+> "仍未正确显示"（多次部署后仍然失败）
+
+**✅ 正确做法**:
+在**每个图表生成方法的开始处**调用 `setup_chinese_fonts()`，确保字体配置在每次渲染前都被应用：
+
+```python
+# chart_generator.py
+
+def generate_comprehensive_dashboard(self, stats: Dict[str, Any]) -> str:
+    """生成美化版综合仪表板"""
+    try:
+        # ✅ 关键修复：在每次生成图表前都重新应用字体配置
+        setup_chinese_fonts()
+
+        # 后续图表生成代码...
+        fig = plt.figure(figsize=(18, 12))
+        # ...
+
+def generate_task_completion_pie_chart(self, stats: Dict[str, Any]) -> str:
+    """生成任务完成情况饼状图"""
+    try:
+        # ✅ 确保字体配置在每次生成图表前都被应用
+        setup_chinese_fonts()
+
+        # 后续图表生成代码...
+
+# 同样应用到所有其他图表生成方法:
+# - generate_user_participation_chart()
+# - generate_progress_trend_chart()
+```
+
+**为什么这样有效**:
+1. ✅ 每次调用都会重新注册 Symbola 字体到 FontManager
+2. ✅ 每次都会重新设置 `plt.rcParams['font.sans-serif']` 字体回退链
+3. ✅ 确保在任何可能重置字体配置的操作（如 `plt.style.use()`）之后都能恢复正确配置
+4. ✅ 不依赖模块导入时的一次性配置
+
+**关键点**:
+1. ❌ **不要**只在模块导入或类初始化时配置字体
+2. ✅ **应该**在每个实际绘图方法开始时配置字体
+3. ✅ 字体配置是幂等的，多次调用不会有副作用
+4. ✅ 这是确保配置生效的最可靠方式
+
+**调试技巧**:
+```bash
+# 验证 setup_chinese_fonts() 是否被调用
+sudo journalctl -u monthly-report-bot -f | grep "开始配置中文和 emoji 字体"
+
+# 验证 Symbola 字体是否成功加载
+sudo journalctl -u monthly-report-bot -f | grep "成功加载 Symbola"
+
+# 检查是否还有字体缺失警告
+sudo journalctl -u monthly-report-bot -f | grep "missing from font"
+```
+
+**相关提交**:
+- `f409649` - fix: call setup_chinese_fonts in ChartGenerator.__init__ to ensure fonts are configured
+
+**修复时间**: 2025-10-27
+**严重程度**: 🔴 高 - 这是坑 #6.4 的根本解决方案
+
+**教训**:
+- matplotlib 的字体配置是有状态的，需要在使用前确保状态正确
+- 模块级别的一次性配置不可靠，应该在每次使用时配置
+- 当发现日志中没有预期的输出时，说明代码根本没有被执行到
+- 字体配置应该"就近原则"：在使用之前立即配置
+
+---
+
 ## 🆕 新增错误记录区
 
 _(每次遇到新问题后，在这里添加记录，然后移动到对应的章节)_
