@@ -1235,6 +1235,108 @@ fc-list | grep -i emoji
 
 _(每次遇到新问题后，在这里添加记录，然后移动到对应的章节)_
 
+### ❌ 坑 #1.3: API类名错误导致代码未真正生效
+
+**发现时间**: 2025-10-27
+
+**问题描述**:
+尽管之前修复了坑 #1.1（使用模拟ID问题），但代码中使用了错误的API类名，导致代码无法运行，修复未真正生效：
+
+```python
+# ❌ 错误的类名（SDK中不存在）
+CreateTaskRequestBody.builder()
+CreateTaskRequestBodyDue.builder()
+CreateTaskRequestBodyOrigin.builder()
+CreateTaskCollaboratorRequest.builder()
+```
+
+**影响**:
+- ❌ 代码无法运行，抛出 AttributeError
+- ❌ 任务无法创建
+- ❌ task_stats.json 中仍然是假ID (task_2025-10_1)
+- ❌ 已完成任务数显示为 0
+
+**根本原因**:
+1. 没有参考 SESSION_SUMMARY_2025-10-23.md 中记录的正确API类名
+2. 根据坑 #4.1 的教训：不要盲目尝试，应该参考已验证的代码
+3. 修复代码时没有实际测试是否能运行
+
+**✅ 正确做法**:
+参考 SESSION_SUMMARY_2025-10-23.md 中的正确API：
+
+```python
+from lark_oapi.api.task.v2 import CreateTaskRequest
+from lark_oapi.api.task.v2.model import InputTask, Due, Member
+
+# 准备成员（在创建时直接分配）
+members_list = []
+for assignee_id in assignees:
+    member = Member.builder() \
+        .id(assignee_id) \
+        .role("assignee") \
+        .build()
+    members_list.append(member)
+
+# 创建任务请求
+request = CreateTaskRequest.builder() \
+    .request_body(InputTask.builder()
+        .summary(title)
+        .description(description)
+        .due(Due.builder()
+            .timestamp(str(timestamp))
+            .is_all_day(False)
+            .build())
+        .members(members_list)  # 直接在创建时分配成员
+        .build()) \
+    .build()
+
+response = await lark_client.task.v2.task.acreate(request)
+task_guid = response.data.task.guid  # ✅ 获取真实GUID
+```
+
+**关键点**:
+1. ✅ 使用 `InputTask` 而非 `CreateTaskRequestBody`
+2. ✅ 使用 `Due` 而非 `CreateTaskRequestBodyDue`
+3. ✅ 使用 `Member` API 在创建时直接分配成员
+4. ✅ 不使用 `Origin`（非必需且容易出错）
+5. ✅ 不在创建后单独分配成员（避免使用 CreateTaskCollaboratorRequest）
+
+**清理假ID的方法**:
+创建了 `clear_fake_task_ids.py` 脚本：
+```bash
+# 清理 task_stats.json 中的假ID
+python3 clear_fake_task_ids.py
+
+# 删除创建记录，让系统重新创建任务
+rm created_tasks.json
+
+# 重启服务
+sudo systemctl restart monthly-report-bot
+```
+
+**验证方法**:
+```bash
+# 检查 task_stats.json 中的ID格式
+cat task_stats.json | python3 -c "import json, sys; data=json.load(sys.stdin); tasks=data.get('tasks', {}); print('假ID:', sum(1 for k in tasks if k.startswith('task_'))); print('真实GUID:', sum(1 for k in tasks if not k.startswith('task_')))"
+
+# 应该输出：
+# 假ID: 0
+# 真实GUID: 24
+```
+
+**用户反馈**:
+用户提供截图显示"已完成: 0"，明确表示"仍未修复成功"
+
+**修复时间**: 2025-10-27
+**严重程度**: 🔴 极高 - 之前的修复未真正生效
+
+**关联坑**:
+- 坑 #1.1: 使用模拟任务ID而非真实GUID（根源问题）
+- 坑 #4.1: 错误添加不存在的客户端参数（相同的"盲目尝试"错误）
+- 坑 #5.1: task_stats.json 中的假ID无法同步（后果）
+
+---
+
 <!--
 模板：
 
