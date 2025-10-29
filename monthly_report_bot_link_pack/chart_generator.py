@@ -30,11 +30,15 @@ def setup_chinese_fonts():
         logger.info("===== 开始配置中文和 emoji 字体 =====")
 
         # 强制重建字体缓存（兼容不同版本的 matplotlib）
+        # 注意：这会重新加载 fontManager，所以必须在此之后再添加自定义字体
         try:
             fm._load_fontmanager(try_read_cache=False)
             logger.info("字体缓存已重建")
         except (TypeError, AttributeError) as e:
             logger.info(f"跳过字体缓存重建: {e}")
+
+        # 定义 Symbola 路径（后面会用到）
+        symbola_path = '/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf'
 
         # 1. 首先检查项目目录的自定义字体（最高优先级）
         custom_font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -47,8 +51,7 @@ def setup_chinese_fonts():
         font_list = []
         emoji_font_paths = []
 
-        # 查找 emoji 字体
-        symbola_path = '/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf'
+        # 查找 emoji 字体（symbola_path 已在前面定义）
         noto_emoji_path = '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf'
 
         if os.path.exists(symbola_path):
@@ -64,9 +67,9 @@ def setup_chinese_fonts():
                     # 注册中文字体
                     font_prop = fm.FontProperties(fname=font_path)
                     chinese_font_name = font_prop.get_name()
-                    font_list.append(chinese_font_name)
+                    font_list = [chinese_font_name]  # 先添加中文字体
 
-                    # 注册 Symbola emoji 字体（优先使用，跳过Noto Color Emoji）
+                    # 注册 Symbola emoji 字体（作为第二顺位fallback）
                     if os.path.exists(symbola_path):
                         print(f"DEBUG: 找到 Symbola 字体: {symbola_path}")
                         try:
@@ -75,10 +78,15 @@ def setup_chinese_fonts():
                             symbola_font_name = symbola_prop.get_name()
                             print(f"DEBUG: Symbola 字体的真实名称: {symbola_font_name}")
 
-                            # 注册到 fontManager
+                            # 注册到 fontManager（强制添加）
                             fm.fontManager.addfont(symbola_path)
 
-                            # 使用真实名称添加到字体列表
+                            # 验证字体是否真的在 fontManager 中
+                            symbola_fonts_in_manager = [f.name for f in fm.fontManager.ttflist if symbola_font_name in f.name]
+                            print(f"DEBUG: fontManager 中的 Symbola 字体: {symbola_fonts_in_manager}")
+                            print(f"DEBUG: fontManager 字体总数: {len(fm.fontManager.ttflist)}")
+
+                            # 添加 Symbola 到字体列表（作为第二优先级）
                             font_list.append(symbola_font_name)
                             print(f"DEBUG: ✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
                             logger.info(f"✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
@@ -97,6 +105,14 @@ def setup_chinese_fonts():
                     plt.rcParams['axes.unicode_minus'] = False
                     print(f"DEBUG: ✅ 使用自定义字体: {font_name} ({font_path})")
                     print(f"DEBUG: ✅ 字体列表: {font_list}")
+                    print(f"DEBUG: ✅ 最终 rcParams['font.sans-serif']: {plt.rcParams['font.sans-serif']}")
+
+                    # 测试字体 fallback 是否工作
+                    from matplotlib.font_manager import findfont, FontProperties
+                    test_prop = FontProperties(family='sans-serif')
+                    found_font = findfont(test_prop)
+                    print(f"DEBUG: ✅ findfont() 返回: {found_font}")
+
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
                     logger.info(f"✅ 字体列表: {font_list}")
                     return
