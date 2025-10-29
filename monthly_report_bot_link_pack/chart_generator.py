@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 # 设置中文字体 - 支持自定义字体文件
 def setup_chinese_fonts():
     """配置中文字体 - 优先使用项目目录的自定义字体"""
+    print("DEBUG: setup_chinese_fonts() 被调用")  # 直接输出到 stdout
     try:
+        print("DEBUG: 进入 try 块")
         logger.info("===== 开始配置中文和 emoji 字体 =====")
 
         # 强制重建字体缓存（兼容不同版本的 matplotlib）
@@ -66,11 +68,14 @@ def setup_chinese_fonts():
 
                     # 注册 Symbola emoji 字体（优先使用，跳过Noto Color Emoji）
                     if os.path.exists(symbola_path):
+                        print(f"DEBUG: 找到 Symbola 字体: {symbola_path}")
                         try:
                             fm.fontManager.addfont(symbola_path)
                             font_list.append('Symbola')
+                            print(f"DEBUG: ✅ 成功加载 Symbola emoji 字体")
                             logger.info(f"✅ 成功加载 Symbola emoji 字体")
                         except Exception as e:
+                            print(f"DEBUG: ❌ 加载 Symbola 字体失败: {e}")
                             logger.warning(f"加载 Symbola 字体失败: {e}")
 
                     # 添加后备字体
@@ -82,6 +87,8 @@ def setup_chinese_fonts():
                     plt.rcParams['font.monospace'] = font_list  # 关键：很多图表标签用 monospace
                     plt.rcParams['font.family'] = 'sans-serif'
                     plt.rcParams['axes.unicode_minus'] = False
+                    print(f"DEBUG: ✅ 使用自定义字体: {font_name} ({font_path})")
+                    print(f"DEBUG: ✅ 字体列表: {font_list}")
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
                     logger.info(f"✅ 字体列表: {font_list}")
                     return
@@ -136,6 +143,9 @@ def setup_chinese_fonts():
         logger.info("===== 字体配置完成 =====")
 
     except Exception as e:
+        print(f"DEBUG: ❌ 字体配置失败: {e}")
+        import traceback
+        traceback.print_exc()
         logger.error(f"❌ 字体配置失败: {e}", exc_info=True)
         plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
