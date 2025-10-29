@@ -70,10 +70,18 @@ def setup_chinese_fonts():
                     if os.path.exists(symbola_path):
                         print(f"DEBUG: 找到 Symbola 字体: {symbola_path}")
                         try:
+                            # 获取 Symbola 字体的真实名称
+                            symbola_prop = fm.FontProperties(fname=symbola_path)
+                            symbola_font_name = symbola_prop.get_name()
+                            print(f"DEBUG: Symbola 字体的真实名称: {symbola_font_name}")
+
+                            # 注册到 fontManager
                             fm.fontManager.addfont(symbola_path)
-                            font_list.append('Symbola')
-                            print(f"DEBUG: ✅ 成功加载 Symbola emoji 字体")
-                            logger.info(f"✅ 成功加载 Symbola emoji 字体")
+
+                            # 使用真实名称添加到字体列表
+                            font_list.append(symbola_font_name)
+                            print(f"DEBUG: ✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
+                            logger.info(f"✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
                         except Exception as e:
                             print(f"DEBUG: ❌ 加载 Symbola 字体失败: {e}")
                             logger.warning(f"加载 Symbola 字体失败: {e}")
@@ -119,10 +127,20 @@ def setup_chinese_fonts():
             # 添加 Symbola emoji 字体（优先使用，跳过Noto Color Emoji）
             if os.path.exists(symbola_path):
                 try:
+                    # 获取 Symbola 字体的真实名称
+                    symbola_prop = fm.FontProperties(fname=symbola_path)
+                    symbola_font_name = symbola_prop.get_name()
+                    print(f"DEBUG: Symbola 字体的真实名称: {symbola_font_name}")
+
+                    # 注册到 fontManager
                     fm.fontManager.addfont(symbola_path)
-                    font_list.append('Symbola')
-                    logger.info(f"✅ 成功加载 Symbola emoji 字体")
+
+                    # 使用真实名称添加到字体列表
+                    font_list.append(symbola_font_name)
+                    print(f"DEBUG: ✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
+                    logger.info(f"✅ 成功加载 Symbola emoji 字体，名称: {symbola_font_name}")
                 except Exception as e:
+                    print(f"DEBUG: ❌ 加载 Symbola 字体失败: {e}")
                     logger.warning(f"加载 Symbola 字体失败: {e}")
 
             font_list.append('DejaVu Sans')
