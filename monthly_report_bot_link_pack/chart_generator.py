@@ -78,12 +78,18 @@ def setup_chinese_fonts():
                             symbola_font_name = symbola_prop.get_name()
                             print(f"DEBUG: Symbola 字体的真实名称: {symbola_font_name}")
 
-                            # 注册到 fontManager（强制添加）
-                            fm.fontManager.addfont(symbola_path)
-
-                            # 验证字体是否真的在 fontManager 中
+                            # 检查是否已经在 fontManager 中（避免重复添加）
                             symbola_fonts_in_manager = [f.name for f in fm.fontManager.ttflist if symbola_font_name in f.name]
-                            print(f"DEBUG: fontManager 中的 Symbola 字体: {symbola_fonts_in_manager}")
+                            if not symbola_fonts_in_manager:
+                                # 只有不存在时才添加
+                                fm.fontManager.addfont(symbola_path)
+                                print(f"DEBUG: ✅ Symbola 已添加到 fontManager")
+                            else:
+                                print(f"DEBUG: ✅ Symbola 已存在于 fontManager，跳过添加")
+
+                            # 验证字体
+                            symbola_fonts_in_manager = [f.name for f in fm.fontManager.ttflist if symbola_font_name in f.name]
+                            print(f"DEBUG: fontManager 中的 Symbola 字体数量: {len(symbola_fonts_in_manager)}")
                             print(f"DEBUG: fontManager 字体总数: {len(fm.fontManager.ttflist)}")
 
                             # 添加 Symbola 到字体列表（作为第二优先级）
@@ -107,11 +113,18 @@ def setup_chinese_fonts():
                     print(f"DEBUG: ✅ 字体列表: {font_list}")
                     print(f"DEBUG: ✅ 最终 rcParams['font.sans-serif']: {plt.rcParams['font.sans-serif']}")
 
-                    # 测试字体 fallback 是否工作
-                    from matplotlib.font_manager import findfont, FontProperties
-                    test_prop = FontProperties(family='sans-serif')
-                    found_font = findfont(test_prop)
-                    print(f"DEBUG: ✅ findfont() 返回: {found_font}")
+                    # 测试字体 fallback 是否工作（放在单独的 try-except 中，避免影响主流程）
+                    try:
+                        from matplotlib.font_manager import findfont, FontProperties
+                        # 不要使用 family='sans-serif'，因为这会触发 parse 错误
+                        # 直接测试查找 SimHei 和 Symbola
+                        simhei_font = findfont(FontProperties(fname=font_path))
+                        print(f"DEBUG: ✅ findfont(SimHei) 返回: {simhei_font}")
+
+                        symbola_font = findfont(FontProperties(fname=symbola_path))
+                        print(f"DEBUG: ✅ findfont(Symbola) 返回: {symbola_font}")
+                    except Exception as e:
+                        print(f"DEBUG: ⚠️  findfont() 测试失败: {e}")
 
                     logger.info(f"✅ 使用自定义字体: {font_name} ({font_path})")
                     logger.info(f"✅ 字体列表: {font_list}")
@@ -148,8 +161,13 @@ def setup_chinese_fonts():
                     symbola_font_name = symbola_prop.get_name()
                     print(f"DEBUG: Symbola 字体的真实名称: {symbola_font_name}")
 
-                    # 注册到 fontManager
-                    fm.fontManager.addfont(symbola_path)
+                    # 检查是否已经在 fontManager 中（避免重复添加）
+                    symbola_fonts_in_manager = [f.name for f in fm.fontManager.ttflist if symbola_font_name in f.name]
+                    if not symbola_fonts_in_manager:
+                        fm.fontManager.addfont(symbola_path)
+                        print(f"DEBUG: ✅ Symbola 已添加到 fontManager")
+                    else:
+                        print(f"DEBUG: ✅ Symbola 已存在于 fontManager，跳过添加")
 
                     # 使用真实名称添加到字体列表
                     font_list.append(symbola_font_name)
