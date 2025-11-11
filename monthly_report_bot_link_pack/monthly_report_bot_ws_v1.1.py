@@ -612,6 +612,45 @@ def build_final_reminder_card() -> Dict:
         ]
     }
 
+def build_daily_stats_card(stats: Dict) -> Dict:
+    """构建每日统计卡片（18-23日 17:00）"""
+    if not stats:
+        stats = get_task_completion_stats()
+
+    progress_width = min(int(stats['completion_rate'] / 10), 10)
+    progress_bar = "█" * progress_width + "░" * (10 - progress_width)
+
+    if stats['completion_rate'] >= 100:
+        summary = "🎉 **今日所有任务已完成！**"
+    elif stats['completion_rate'] >= 80:
+        summary = "✅ **今日完成情况良好！**"
+    elif stats['completion_rate'] >= 60:
+        summary = "⚠️ **今日完成情况一般！**"
+    else:
+        summary = "❌ **今日完成情况需改进！**"
+
+    return {
+        "config": {
+            "wide_screen_mode": True
+        },
+        "header": {
+            "title": {
+                "tag": "plain_text",
+                "content": "📊 今日完成情况统计"
+            },
+            "template": "blue"
+        },
+        "elements": [
+            {
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": f"**{stats['current_month']} 月报任务进展**\n\n{summary}\n\n📈 **完成情况**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 未完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%\n\n📊 **进度条**:\n`{progress_bar}` {stats['completion_rate']}%\n\n⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}\n\n💡 **提示**: 图表将随后发送"
+                }
+            }
+        ]
+    }
+
 def build_final_stats_card() -> Dict:
     """构建最终统计卡片"""
     stats = get_task_completion_stats()
@@ -721,18 +760,59 @@ async def send_text_to_chat(text: str) -> bool:
                         .content(json.dumps({"text": text}, ensure_ascii=False))
                         .build()) \
             .build()
-        
+
         response = await lark_client.im.v1.message.acreate(request)
-        
+
         if response.success():
             logger.info("文本消息发送成功: %s", text)
             return True
         else:
             logger.error("文本消息发送失败, code: %s, msg: %s", response.code, response.msg)
             return False
-            
+
     except Exception as e:
         logger.error("发送文本消息异常: %s", e)
+        return False
+
+async def send_image_to_chat(image_path: str, title: str = "图片") -> bool:
+    """发送图片到群聊（作为卡片形式）"""
+    try:
+        # 上传图片获取 image_key
+        image_key = await upload_image(image_path)
+
+        if not image_key:
+            logger.error("图片上传失败，无法发送")
+            return False
+
+        # 构建包含图片的卡片
+        card = {
+            "config": {
+                "wide_screen_mode": True
+            },
+            "header": {
+                "title": {
+                    "tag": "plain_text",
+                    "content": title
+                },
+                "template": "blue"
+            },
+            "elements": [
+                {
+                    "tag": "img",
+                    "img_key": image_key,
+                    "alt": {
+                        "tag": "plain_text",
+                        "content": title
+                    }
+                }
+            ]
+        }
+
+        # 发送卡片
+        return await send_card_to_chat(card)
+
+    except Exception as e:
+        logger.error("发送图片异常: %s", e)
         return False
 
 # ---------------------- 交互增强：回帖与Echo ----------------------
@@ -914,8 +994,9 @@ def generate_echo_reply(text: str) -> str:
     if normalized in {"截止", "截止时间", "时间", "时间安排", "提醒", "什么时候", "deadline", "schedule", "plan", "计划"}:
         return (
             "⏰ 时间安排\n\n"
-            "- 17日 09:00：创建当月任务\n"
-            "- 18-23日 09:00：发送每日提醒\n"
+            "- 17日 09:30：创建当月任务\n"
+            "- 18-23日 09:30：发送每日提醒（@未完成负责人）\n"
+            "- 18-23日 17:00：发送统计卡片+图表\n"
             "- 23日 17:00：发送最终催办和统计"
         )
 
@@ -1287,22 +1368,31 @@ async def _run_official_ws(loop: asyncio.AbstractEventLoop) -> None:
 # ---------------------- 定时任务 ----------------------
 
 def should_create_tasks(now: Optional[datetime] = None) -> bool:
-    """判断是否应该创建任务（17日09:00）"""
+    """判断是否应该创建任务（17日09:30）"""
     if now is None:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
 
-    return current_day == 17 and current_time == "09:00"
+    return current_day == 17 and current_time == "09:30"
 
 def should_send_daily_reminder(now: Optional[datetime] = None) -> bool:
-    """判断是否应该发送每日提醒（18-23日09:00）"""
+    """判断是否应该发送每日提醒（18-23日09:30，@未完成负责人）"""
     if now is None:
         now = datetime.now(TZ)
     current_day = now.day
     current_time = now.strftime("%H:%M")
 
-    return 18 <= current_day <= 23 and current_time == "09:00"
+    return 18 <= current_day <= 23 and current_time == "09:30"
+
+def should_send_daily_stats(now: Optional[datetime] = None) -> bool:
+    """判断是否应该发送每日统计（18-23日17:00，统计完成情况+图表展示）"""
+    if now is None:
+        now = datetime.now(TZ)
+    current_day = now.day
+    current_time = now.strftime("%H:%M")
+
+    return 18 <= current_day <= 23 and current_time == "17:00"
 
 def should_send_final_reminder(now: Optional[datetime] = None) -> bool:
     """判断是否应该发送最终催办（23日17:00）"""
@@ -1344,11 +1434,26 @@ async def main_loop():
                     await send_text_to_chat("❌ 任务创建失败，请检查配置")
             
             elif should_send_daily_reminder(now):
-                logger.info("发送每日提醒...")
+                logger.info("发送每日提醒（09:30）...")
                 await sync_task_completion_status()
                 card = build_daily_reminder_card()
                 await send_card_to_chat(card)
-            
+
+            elif should_send_daily_stats(now):
+                logger.info("发送每日统计（17:00，完成情况+图表）...")
+                await sync_task_completion_status()
+                # 发送统计卡片
+                stats = load_task_stats()
+                card = build_daily_stats_card(stats)
+                await send_card_to_chat(card)
+                # 生成并发送图表
+                try:
+                    from chart_generator import chart_generator
+                    chart_path = chart_generator.generate_comprehensive_dashboard(stats)
+                    await send_image_to_chat(chart_path, "📊 今日完成情况统计图表")
+                except Exception as e:
+                    logger.error(f"生成图表失败: {e}")
+
             elif should_send_final_reminder(now):
                 logger.info("发送最终催办...")
                 await sync_task_completion_status()
