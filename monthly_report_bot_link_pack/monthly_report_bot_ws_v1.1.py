@@ -304,7 +304,8 @@ def get_task_completion_stats() -> Dict[str, Any]:
                 "completed_tasks": 0,
                 "completion_rate": 0.0,
                 "pending_tasks": 0,
-                "pending_assignees": []
+                "pending_assignees": [],
+                "tasks": {}
             }
         
         pending_tasks = stats["total_tasks"] - stats["completed_tasks"]
@@ -321,7 +322,8 @@ def get_task_completion_stats() -> Dict[str, Any]:
             "completed_tasks": stats["completed_tasks"],
             "completion_rate": stats["completion_rate"],
             "pending_tasks": pending_tasks,
-            "pending_assignees": pending_assignees
+            "pending_assignees": pending_assignees,
+            "tasks": stats.get("tasks", {})  # 添加 tasks 字段，用于图表生成
         }
         
     except Exception as e:
@@ -332,7 +334,8 @@ def get_task_completion_stats() -> Dict[str, Any]:
             "completed_tasks": 0,
             "completion_rate": 0.0,
             "pending_tasks": 0,
-            "pending_assignees": []
+            "pending_assignees": [],
+            "tasks": {}
         }
 
 def get_pending_tasks_detail() -> List[Dict[str, Any]]:
@@ -391,7 +394,7 @@ USER_ID_MAPPING = {
     "ou_5199fde738bcaedd5fcf4555b0adf7a0": "孙建敏",
     "ou_22703f0c3bdb25b39de2b34d9605b8a9": "齐书红",
     "ou_5b1673a24607bec4fbcbc74b8572e774": "杨强",
-    "ou_b96c7ed4a604dc049569102d01c6c26d": "刘野",
+    "ou_b96c7cd4a604dc049569102d01c6c26d": "刘野",
     "ou_5ad999af75b598dac3a05c773800d2bc": "孟洪武",
     "ou_1e008e4217c7283055ce817d3cdf9682": "王明毅",
     "ou_9be94cf6a100dbaf2030070c184050ca": "王紫阳",
@@ -406,6 +409,7 @@ USER_ID_MAPPING = {
     "ou_31b587d7ca13d371a0d5b798ebb475fe": "钟飞宏",
     "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
     "ou_33d81ce8839d93132e4417530f60c4a9": "高雅慧",
+    "ou_df1bfcd8e72f347c19e127154e7e618b": "袁龙",  # 新增用户 2025-11-18
 }
 
 def get_user_display_name(user_id: str) -> str:
@@ -458,10 +462,11 @@ def build_task_creation_card() -> Dict:
         assignee_mentions = ""
         if task["assignees"]:
             for assignee in task["assignees"]:
-                assignee_mentions += f"<at user_id=\"{assignee}\"></at> "
+                display_name = get_user_display_name(assignee)  # 获取显示名称
+                assignee_mentions += f"<at user_id=\"{assignee}\">{display_name}</at> "
         else:
             assignee_mentions = "**待分配**"
-        
+
         task_list_text += f"{i:2d}. **{task['title']}**\n    👤 负责人: {assignee_mentions}\n\n"
     
     return {
@@ -918,14 +923,16 @@ def generate_echo_reply(text: str) -> str:
     normalized = _sanitize_command_text(text)
     if normalized in {"/help", "help", "?", "帮助", "命令", "功能", "说明", "帮助一下", "怎么用"}:
         return (
-            "📋 月报机器人帮助\n\n"
-            "- 发送『状态/进度/统计/完成率』查看任务进度\n"
-            "- 发送『未完成/谁没交/任务列表』查看未完成任务\n"
-            "- 发送『图表/可视化/饼图』查看美观的统计图表\n"
-            "- 发送『文件/链接/模板/地址』获取月报文件链接\n"
-            "- 发送『截止/时间/提醒/什么时候』查看时间安排\n"
-            "- 发送『已完成/完成了/done』查看如何标记完成说明\n"
-            "- 其它文本将按原文回声返回（echo）"
+            "📋 **月报机器人帮助**\n\n"
+            "🔍 **查询功能：**\n"
+            "• 状态/进度/统计 - 查看任务完成情况\n"
+            "• 未完成/任务列表 - 查看待完成任务详情\n"
+            "• 图表/可视化 - 生成美观的统计图表\n\n"
+            "📎 **其他功能：**\n"
+            "• 文件/链接 - 获取月报文件地址\n"
+            "• 截止/时间 - 查看时间安排\n"
+            "• 已完成/完成了 - 标记任务完成\n\n"
+            "💡 **提示：** 直接发送问题，我会尽力帮助您！"
         )
 
     # 状态/统计
@@ -1004,7 +1011,19 @@ def generate_echo_reply(text: str) -> str:
     if normalized in {"已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦"}:
         return "感谢您的辛勤工作，祝您工作愉快，后续将不再催办"
 
-    return f"Echo: {text}"
+    # 默认回复：人性化的帮助提示
+    friendly_responses = [
+        f"👋 您好！我是月报收集助手。\n\n您刚才说的是「{text[:20]}{'...' if len(text) > 20 else ''}」，我暂时还不太理解呢。\n\n💡 试试以下命令吧：\n• 发送「帮助」查看所有功能\n• 发送「进度」查看任务完成情况\n• 发送「图表」查看可视化统计\n• 发送「任务列表」查看未完成任务",
+        f"🤔 抱歉，我还不太明白「{text[:20]}{'...' if len(text) > 20 else ''}」是什么意思。\n\n您可以：\n• 输入「帮助」了解我能做什么\n• 输入「进度」查看当前完成情况\n• 输入「图表」查看美观的统计图表",
+        f"😊 收到您的消息「{text[:20]}{'...' if len(text) > 20 else ''}」。\n\n我是月报机器人，专门帮助大家跟踪月报任务进度！\n\n🔍 常用命令：\n• 帮助 - 查看所有功能\n• 进度 - 查看完成情况\n• 图表 - 查看可视化数据"
+    ]
+
+    # 根据文本长度选择回复样式
+    import hashlib
+    text_hash = int(hashlib.md5(text.encode()).hexdigest(), 16)
+    response_index = text_hash % len(friendly_responses)
+
+    return friendly_responses[response_index]
 
 def generate_chart_response() -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """生成图表响应，返回 (chart_path, stats) 元组"""
@@ -1046,13 +1065,17 @@ def mark_user_tasks_completed(user_id: str) -> Tuple[int, List[str]]:
         (完成任务数, 任务标题列表)
     """
     try:
+        logger.info("[DEBUG] mark_user_tasks_completed called for user_id=%s", user_id)
         stats = load_task_stats()
         if not stats or "tasks" not in stats:
+            logger.info("[DEBUG] No stats or tasks found, returning 0")
             return 0, []
 
         current_month = datetime.now(TZ).strftime("%Y-%m")
         completed_count = 0
         completed_titles = []
+
+        logger.info("[DEBUG] Processing %d tasks for user_id=%s", len(stats.get("tasks", {})), user_id)
 
         for task_id, task_info in stats["tasks"].items():
             # 检查是否是该用户的任务且未完成
@@ -1107,6 +1130,7 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
             return True
 
         normalized = _sanitize_command_text(text)
+        logger.info("[DEBUG] Message from user %s: text=%r, normalized=%r", user_open_id, text, normalized)
 
         # 未完成/谁没交 → 若当月未创建任务则直接回复“当前没有任务”
         if normalized in {"未完成", "谁没交", "还有谁", "任务列表", "列表", "pending", "todo"}:
@@ -1249,8 +1273,10 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
 
         # 已完成/完成了 - 自动标记用户的任务为完成
         if normalized in {"已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦"}:
+            logger.info("[DEBUG] '已完成' command matched! user_open_id=%s", user_open_id)
             if user_open_id:
                 # 标记该用户的所有未完成任务为已完成
+                logger.info("[DEBUG] Calling mark_user_tasks_completed for user_open_id=%s", user_open_id)
                 completed_count, completed_titles = mark_user_tasks_completed(user_open_id)
 
                 if completed_count > 0:
