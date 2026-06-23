@@ -441,27 +441,27 @@ def get_completed_assignees_summary() -> Dict[str, int]:
 # ---------------------- 用户信息映射 ----------------------
 
 USER_ID_MAPPING = {
-    "ou_17b6bee82dd946d92a322cc7dea40eb7": "马富凡",
+    "ou_0d2f73fe7a911e049d051f2de23f9289": "马富凡",
     "ou_03491624846d90ea22fa64177860a8cf": "刘智辉",
     "ou_7552fdb195c3ad2c0453258fb157c12a": "成自飞",
     "ou_145eca14d330bb8162c45536538d6764": "王继军",
-    "ou_0bbab538833c35081e8f5c3ef213e17e": "熊黄平",
-    "ou_f5338c49049621c36310e2215204d0be": "景晓东",
+    "ou_e1c26a62aed90bc5b879ba4d244adb75": "熊黄平",
+    "ou_b792a42b4ebbae74be98e8e5f28659ca": "景晓东",
     "ou_2f93cb9407ca5a281a92d1f5a72fdf7b": "唐进",
-    "ou_07443a67428d8741eab5eac851b754b9": "范明杰",
+    "ou_e8b3904bb4e9ebe4b8e039b88faa6db4": "范明杰",
     "ou_a9c22d7a23ff6dd0e3dc1a93b2763b5a": "张文康",
-    "ou_66ef2e056d0425ac560717a8b80395c3": "蒲星宇",
-    "ou_d85dd7bb7625ab3e3f8b129e54934aea": "何寨",
-    "ou_3b14801caa065a0074c7d6db8603f288": "袁阿虎",
+    "ou_12e764a007cd597d9f03922f8f7c8c2e": "蒲星宇",
+    "ou_f22b36450dd631f8def2ccadc07235d7": "何寨",
+    "ou_e8d10f3f8106f5c5ca9d864f90782f51": "袁阿虎",
     "ou_b843712f1d1622d5038a034df9d7f33a": "魏荣荣",
     "ou_5199fde738bcaedd5fcf4555b0adf7a0": "孙建敏",
-    "ou_22703f0c3bdb25b39de2b34d9605b8a9": "齐书红",
+    "ou_74c2c34207adb95db789b2f9fe4bc2bf": "齐书红",
     "ou_5b1673a24607bec4fbcbc74b8572e774": "杨强",
-    "ou_b96c7cd4a604dc049569102d01c6c26d": "刘野",  # 修正ID 2025-03
+    "ou_ada0f1ebc2d334bec7685f3c1545fe5d": "刘野",  # 修正ID 2025-03
     "ou_5ad999af75b598dac3a05c773800d2bc": "孟洪武",
     "ou_1e008e4217c7283055ce817d3cdf9682": "王明毅",
     "ou_9be94cf6a100dbaf2030070c184050ca": "王紫阳",
-    "ou_c9d7859417eb0344b310fcff095fa639": "李洪蛟",
+    "ou_6436b107b7acc310c230bc19161679b5": "李洪蛟",
     "ou_49299becc523c8d3aa1120261f1e2bcd": "李炤",
     "ou_05bf998a0c033635dcabbde130ab2021": "何庆平",
     "ou_3a123c0b19f5fcde8e9832da17a79144": "张德勇",
@@ -470,12 +470,12 @@ USER_ID_MAPPING = {
     "ou_a348100295a01cd7cfa597a16211c805": "李怡慧",
     "ou_9847326a1fea8db87079101775bd97a9": "王冠群",
     "ou_31b587d7ca13d371a0d5b798ebb475fe": "钟飞宏",
-    "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
-    "ou_33d81ce8839d93132e4417530f60c4a9": "高雅慧",
-    "ou_df1bfcd8e72f347c19e127154e7e618b": "袁龙",  # 新增用户 2025-11-18
+    "ou_b54c036f6aca80c566157e951b2aa7ea": "闵国政",
+    "ou_d1eb2de82f6609f7e5e001508587f32b": "高雅慧",
+    "ou_621143d2374d7bb3693a179a15a227b6": "袁龙",  # 新增用户 2025-11-18
     "ou_5ca06c62f2854b2bc0947e83fc85bf96": "屈超",  # 修正ID 2025-03
-    "ou_ca6bebe2baa684e0a0267408f9f72ef4": "季宗军",  # 新增用户 2025-03
-    "ou_473b647c1b9ec69a0dcac35bfc35a5a4": "吴中甫",  # 新增用户 2025-03
+    "ou_e8face5de9cc109f67f385ec3fced158": "季宗军",  # 新增用户 2025-03
+    "ou_b709bc9bad1bbaf2edbcc95f5138e3c3": "吴中甫",  # 新增用户 2025-03
     "ou_6c3e3989442de940036939a732f0e658": "张随",
     "ou_e32b70d3b2dcab3b77d043650f2ecbad": "田致维",
 }
