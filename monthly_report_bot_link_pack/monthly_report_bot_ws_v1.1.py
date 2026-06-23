@@ -42,6 +42,12 @@ try:
 except ImportError:
     chart_generator = None
 
+try:
+    from ai_intent import classify_intent, intent_to_command
+except ImportError:
+    classify_intent = None
+    intent_to_command = None
+
 VERSION = "1.3.1-interactive"
 
 # ---------------------- 基础配置 ----------------------
@@ -67,6 +73,7 @@ FILE_URL   = os.environ.get("FILE_URL", "").strip()
 TZ_NAME    = os.environ.get("TZ", "America/Argentina/Buenos_Aires").strip()
 TZ         = pytz.timezone(TZ_NAME)
 USE_OFFICIAL_WS = os.environ.get("USE_OFFICIAL_WS", "true").lower() == "true"
+AI_INTENT_ENABLED = os.environ.get("AI_INTENT_ENABLED", "true").lower() == "true"
 
 # 欢迎卡片配置
 WELCOME_CARD_ID = os.environ.get("WELCOME_CARD_ID", "AAqInYqWzIiu6")
@@ -209,12 +216,43 @@ async def check_task_status_from_feishu(task_id: str) -> bool:
         logger.error("检查任务状态异常: %s, task_id: %s", e, task_id)
         return False
 
-def update_task_completion(task_id: str, task_title: str, assignees: List[str], completed: bool = True) -> None:
+async def complete_task_on_feishu(task_id: str) -> bool:
+    """调用飞书API将任务标记为完成（设置completed_at时间戳）"""
+    try:
+        if not lark_client:
+            logger.warning("飞书客户端未初始化，无法完成任务")
+            return False
+
+        # 使用 PatchTaskRequest 更新任务，设置 completed_at 时间戳
+        # completed_at 不为空表示任务已完成
+        completed_timestamp = str(int(datetime.now(TZ).timestamp() * 1000))
+
+        request = PatchTaskRequest.builder() \
+            .task_guid(task_id) \
+            .request_body(InputTask.builder()
+                        .completed_at(completed_timestamp)
+                        .build()) \
+            .build()
+
+        response = await lark_client.task.v2.task.apatch(request)
+
+        if response.success():
+            logger.info("✅ 飞书任务已标记完成: %s", task_id)
+            return True
+        else:
+            logger.warning("❌ 飞书任务完成失败: %s, code: %s, msg: %s", task_id, response.code, response.msg)
+            return False
+
+    except Exception as e:
+        logger.error("飞书任务完成异常: %s, task_id: %s", e, task_id)
+        return False
+
+def update_task_completion(task_id: str, task_title: str, assignees: List[str], completed: bool = True, task_type: str = "月报") -> None:
     """更新任务完成状态"""
     try:
         stats = load_task_stats()
         current_month = datetime.now(TZ).strftime("%Y-%m")
-        
+
         if stats["current_month"] != current_month:
             stats = {
                 "current_month": current_month,
@@ -224,11 +262,12 @@ def update_task_completion(task_id: str, task_title: str, assignees: List[str], 
                 "completion_rate": 0.0,
                 "last_update": datetime.now(TZ).isoformat()
             }
-        
+
         if task_id not in stats["tasks"]:
             stats["tasks"][task_id] = {
                 "title": task_title,
                 "assignees": assignees,
+                "task_type": task_type,
                 "created_at": datetime.now(TZ).isoformat(),
                 "completed": False,
                 "completed_at": None
@@ -267,20 +306,24 @@ async def sync_task_completion_status() -> None:
                     if is_completed:
                         stats["tasks"][task_id]["completed"] = True
                         stats["tasks"][task_id]["completed_at"] = datetime.now(TZ).isoformat()
-                        stats["completed_tasks"] += 1
                         logger.info("任务标记为已完成: %s", task_info["title"])
                     else:
                         if task_info["completed"]:
-                            stats["completed_tasks"] -= 1
+                            logger.info("保留本地已完成状态，不因远端未完成/查询失败而降级: %s", task_info["title"])
+                            continue
                         stats["tasks"][task_id]["completed"] = False
                         stats["tasks"][task_id]["completed_at"] = None
-                        logger.info("任务标记为未完成: %s", task_info["title"])
+                        logger.info("任务保持未完成: %s", task_info["title"])
                     updated_count += 1
             except Exception as e:
                 logger.error("同步任务状态失败: %s, task_id: %s", e, task_id)
         
+        stats["total_tasks"] = len(stats["tasks"])
+        stats["completed_tasks"] = sum(1 for task in stats["tasks"].values() if task.get("completed", False))
         if stats["total_tasks"] > 0:
             stats["completion_rate"] = round(stats["completed_tasks"] / stats["total_tasks"] * 100, 2)
+        else:
+            stats["completion_rate"] = 0.0
         
         if updated_count > 0:
             save_task_stats(stats)
@@ -316,6 +359,22 @@ def get_task_completion_stats() -> Dict[str, Any]:
                 pending_assignees.extend(task_info["assignees"])
         pending_assignees = list(set(pending_assignees))
         
+        # 按任务类型分组统计
+        type_stats: Dict[str, Any] = {}
+        for task_info in stats["tasks"].values():
+            ttype = task_info.get("task_type", "月报")
+            if ttype not in type_stats:
+                type_stats[ttype] = {"total": 0, "completed": 0, "pending_assignees": []}
+            type_stats[ttype]["total"] += 1
+            if task_info["completed"]:
+                type_stats[ttype]["completed"] += 1
+            else:
+                type_stats[ttype]["pending_assignees"].extend(task_info["assignees"])
+        for ttype, ts in type_stats.items():
+            ts["pending"] = ts["total"] - ts["completed"]
+            ts["completion_rate"] = round(ts["completed"] / ts["total"] * 100, 2) if ts["total"] > 0 else 0.0
+            ts["pending_assignees"] = list(set(ts["pending_assignees"]))
+
         return {
             "current_month": stats["current_month"],
             "total_tasks": stats["total_tasks"],
@@ -323,9 +382,10 @@ def get_task_completion_stats() -> Dict[str, Any]:
             "completion_rate": stats["completion_rate"],
             "pending_tasks": pending_tasks,
             "pending_assignees": pending_assignees,
-            "tasks": stats.get("tasks", {})  # 添加 tasks 字段，用于图表生成
+            "type_stats": type_stats,
+            "tasks": stats.get("tasks", {})
         }
-        
+
     except Exception as e:
         logger.error("获取任务完成统计失败: %s", e)
         return {
@@ -335,22 +395,25 @@ def get_task_completion_stats() -> Dict[str, Any]:
             "completion_rate": 0.0,
             "pending_tasks": 0,
             "pending_assignees": [],
+            "type_stats": {},
             "tasks": {}
         }
 
-def get_pending_tasks_detail() -> List[Dict[str, Any]]:
-    """获取未完成任务的详细信息"""
+def get_pending_tasks_detail(task_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    """获取未完成任务的详细信息，可按任务类型过滤"""
     try:
         stats = load_task_stats()
         pending_tasks = []
 
         for task_id, task_info in stats["tasks"].items():
             if not task_info["completed"]:
-                pending_tasks.append({
-                    "task_id": task_id,
-                    "title": task_info["title"],
-                    "assignees": task_info["assignees"]
-                })
+                if task_type is None or task_info.get("task_type", "月报") == task_type:
+                    pending_tasks.append({
+                        "task_id": task_id,
+                        "title": task_info["title"],
+                        "assignees": task_info["assignees"],
+                        "task_type": task_info.get("task_type", "月报")
+                    })
 
         return pending_tasks
 
@@ -394,7 +457,7 @@ USER_ID_MAPPING = {
     "ou_5199fde738bcaedd5fcf4555b0adf7a0": "孙建敏",
     "ou_22703f0c3bdb25b39de2b34d9605b8a9": "齐书红",
     "ou_5b1673a24607bec4fbcbc74b8572e774": "杨强",
-    "ou_b96c7cd4a604dc049569102d01c6c26d": "刘野",
+    "ou_b96c7ed4a604dc049569102d01c6ec26d": "刘野",  # 修正ID 2025-03
     "ou_5ad999af75b598dac3a05c773800d2bc": "孟洪武",
     "ou_1e008e4217c7283055ce817d3cdf9682": "王明毅",
     "ou_9be94cf6a100dbaf2030070c184050ca": "王紫阳",
@@ -410,6 +473,11 @@ USER_ID_MAPPING = {
     "ou_50c492f1d2b2ee2107c4e28ab4416732": "闵国政",
     "ou_33d81ce8839d93132e4417530f60c4a9": "高雅慧",
     "ou_df1bfcd8e72f347c19e127154e7e618b": "袁龙",  # 新增用户 2025-11-18
+    "ou_5ca06c62f2854b2bc0947e83fc85bf96": "屈超",  # 修正ID 2025-03
+    "ou_ca6bebe2baa684e0a0267408f9f72ef4": "季宗军",  # 新增用户 2025-03
+    "ou_473b647c1b9ec69a0dcac35bfc35a5a4": "吴中甫",  # 新增用户 2025-03
+    "ou_6c3e3989442de940036939a732f0e658": "张随",
+    "ou_e32b70d3b2dcab3b77d043650f2ecbad": "田致维",
 }
 
 def get_user_display_name(user_id: str) -> str:
@@ -505,6 +573,19 @@ def build_task_creation_card() -> Dict:
         ]
     }
 
+def _build_type_summary(stats: Dict) -> str:
+    """生成双主线分类统计文字，插入卡片正文"""
+    ts = stats.get("type_stats", {})
+    yb = ts.get("月报", {})
+    zdxm = ts.get("重大项目月报", {})
+    parts = []
+    if yb:
+        parts.append(f"  📌 月报: {yb.get('completed',0)}/{yb.get('total',0)} ({yb.get('completion_rate',0)}%)")
+    if zdxm:
+        parts.append(f"  📌 公司重大项目月报: {zdxm.get('completed',0)}/{zdxm.get('total',0)} ({zdxm.get('completion_rate',0)}%)")
+    return ("\n" + "\n".join(parts)) if parts else ""
+
+
 def build_daily_reminder_card() -> Dict:
     """构建每日提醒卡片"""
     stats = get_task_completion_stats()
@@ -542,7 +623,7 @@ def build_daily_reminder_card() -> Dict:
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**月度报告任务进度提醒**\n\n📊 **当前进度**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 待完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{mention_text}{task_list}\n\n请未完成任务的负责人尽快处理！"
+                    "content": f"**月度报告任务进度提醒**\n\n📊 **当前进度**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 待完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{_build_type_summary(stats)}{mention_text}{task_list}\n\n请未完成任务的负责人尽快处理！"
                 }
             },
             {
@@ -597,7 +678,7 @@ def build_final_reminder_card() -> Dict:
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**月度报告截止日期临近！**\n\n📊 **当前进度**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 待完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{mention_text}{task_list}\n\n🚨 **请立即完成剩余任务！**"
+                    "content": f"**月度报告截止日期临近！**\n\n📊 **当前进度**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 待完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{_build_type_summary(stats)}{mention_text}{task_list}\n\n🚨 **请立即完成剩余任务！**"
                 }
             },
             {
@@ -650,7 +731,7 @@ def build_daily_stats_card(stats: Dict) -> Dict:
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**{stats['current_month']} 月报任务进展**\n\n{summary}\n\n📈 **完成情况**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 未完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%\n\n📊 **进度条**:\n`{progress_bar}` {stats['completion_rate']}%\n\n⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}\n\n💡 **提示**: 图表将随后发送"
+                    "content": f"**{stats['current_month']} 月报任务进展**\n\n{summary}\n\n📈 **完成情况**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 未完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{_build_type_summary(stats)}\n\n📊 **进度条**:\n`{progress_bar}` {stats['completion_rate']}%\n\n⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}\n\n💡 **提示**: 图表将随后发送"
                 }
             }
         ]
@@ -698,7 +779,7 @@ def build_final_stats_card() -> Dict:
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**{stats['current_month']} 月度报告完成情况**\n\n{summary}\n\n📈 **完成情况**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 未完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%\n\n📊 **进度条**:\n`{progress_bar}` {stats['completion_rate']}%{chart_info}\n\n⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}"
+                    "content": f"**{stats['current_month']} 月度报告完成情况**\n\n{summary}\n\n📈 **完成情况**:\n• 总任务数: {stats['total_tasks']}\n• 已完成: {stats['completed_tasks']}\n• 未完成: {stats['pending_tasks']}\n• 完成率: {stats['completion_rate']}%{_build_type_summary(stats)}\n\n📊 **进度条**:\n`{progress_bar}` {stats['completion_rate']}%{chart_info}\n\n⏰ 统计时间: {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')}"
                 }
             },
             {
@@ -918,6 +999,44 @@ def _sanitize_command_text(text: str) -> str:
     return s.lower()
 
 
+_DIRECT_COMMAND_TEXTS = {
+    "/help", "help", "?", "帮助", "命令", "功能", "说明",
+    "状态", "进度", "统计", "完成率", "进展", "完成情况", "status", "progress", "summary",
+    "未完成", "谁没交", "谁未交", "谁未提交", "未提交", "没交", "未上交", "还有谁",
+    "任务列表", "列表", "pending", "todo",
+    "我的任务", "我的待办", "我负责的任务", "my tasks", "my task", "mine",
+    "文件", "链接", "地址", "月报", "月报链接", "报告", "文档", "表格", "模板", "模板地址",
+    "file", "link",
+    "截止", "截止时间", "时间", "时间安排", "提醒", "什么时候", "deadline", "schedule", "plan", "计划",
+    "图表", "可视化", "饼图", "统计图", "图表统计", "chart", "visualization", "pie", "dashboard",
+    "已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦",
+}
+
+
+def _resolve_command_text_with_ai(text: str, normalized: str) -> str:
+    """Use AI only for free-form text; exact commands stay local and deterministic."""
+    if normalized in _DIRECT_COMMAND_TEXTS:
+        return normalized
+    if not AI_INTENT_ENABLED or classify_intent is None or intent_to_command is None:
+        return normalized
+
+    try:
+        intent_result = classify_intent(text)
+        command = intent_to_command(intent_result)
+        if command:
+            logger.info(
+                "AI intent matched: text=%r intent=%s confidence=%s command=%s",
+                text,
+                intent_result.get("intent"),
+                intent_result.get("confidence"),
+                command,
+            )
+            return _sanitize_command_text(command)
+    except Exception as e:
+        logger.warning("AI intent fallback to keyword matching: %s", e)
+    return normalized
+
+
 def generate_echo_reply(text: str) -> str:
     """根据输入文本生成回声/帮助回复（可单元测试）"""
     normalized = _sanitize_command_text(text)
@@ -925,7 +1044,9 @@ def generate_echo_reply(text: str) -> str:
         return (
             "📋 **月报机器人帮助**\n\n"
             "🔍 **查询功能：**\n"
-            "• 状态/进度/统计 - 查看任务完成情况\n"
+            "• 状态/进度/统计 - 查看全部任务完成情况\n"
+            "• 月报进度 - 查看月报主线（23条）完成情况\n"
+            "• 公司重大项目进度 - 查看公司重大项目月报主线（37条）完成情况\n"
             "• 未完成/任务列表 - 查看待完成任务详情\n"
             "• 图表/可视化 - 生成美观的统计图表\n\n"
             "📎 **其他功能：**\n"
@@ -935,8 +1056,38 @@ def generate_echo_reply(text: str) -> str:
             "💡 **提示：** 直接发送问题，我会尽力帮助您！"
         )
 
-    # 状态/统计
-    if normalized in {"状态", "进度", "统计", "完成率", "进展", "完成情况", "status", "progress", "summary"}:
+    # 月报主线进度
+    if normalized in {"月报进度", "月报状态", "月报统计", "月报完成情况"}:
+        stats = get_task_completion_stats()
+        ts = stats.get("type_stats", {}).get("月报", {})
+        if not ts:
+            return "📊 月报任务尚未创建"
+        lines = [
+            f"📊 月报进度（{stats['current_month']}）",
+            f"- 总任务数: {ts['total']}",
+            f"- 已完成: {ts['completed']}",
+            f"- 待完成: {ts['pending']}",
+            f"- 完成率: {ts['completion_rate']}%",
+        ]
+        return "\n".join(lines)
+
+    # 公司重大项目月报主线进度
+    if normalized in {"公司重大项目进度", "重大项目进度", "公司重大项目月报进度", "重大项目状态", "重大项目统计", "重大项目月报进度"}:
+        stats = get_task_completion_stats()
+        ts = stats.get("type_stats", {}).get("重大项目月报", {})
+        if not ts:
+            return "📊 公司重大项目月报任务尚未创建"
+        lines = [
+            f"📊 公司重大项目月报进度（{stats['current_month']}）",
+            f"- 总任务数: {ts['total']}",
+            f"- 已完成: {ts['completed']}",
+            f"- 待完成: {ts['pending']}",
+            f"- 完成率: {ts['completion_rate']}%",
+        ]
+        return "\n".join(lines)
+
+    # 状态/统计（全部）
+    if normalized in {"状态", "进度", "统计", "完成率", "进展", "完成情况", "总进度", "全部进度", "status", "progress", "summary"}:
         # 未创建任务（当月）→ 直接提示无任务
         try:
             created = load_created_tasks()
@@ -1054,9 +1205,9 @@ def generate_chart_response() -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         logger.error(f"生成图表响应失败: {e}")
         return None, None
 
-def mark_user_tasks_completed(user_id: str) -> Tuple[int, List[str]]:
+async def mark_user_tasks_completed(user_id: str) -> Tuple[int, List[str]]:
     """
-    标记某个用户的所有未完成任务为已完成
+    标记某个用户的所有未完成任务为已完成（本地+飞书API）
 
     Args:
         user_id: 用户的 open_id
@@ -1074,19 +1225,35 @@ def mark_user_tasks_completed(user_id: str) -> Tuple[int, List[str]]:
         current_month = datetime.now(TZ).strftime("%Y-%m")
         completed_count = 0
         completed_titles = []
+        tasks_to_complete = []  # 收集需要完成的任务
 
         logger.info("[DEBUG] Processing %d tasks for user_id=%s", len(stats.get("tasks", {})), user_id)
 
+        # 第一步：找出该用户所有未完成的任务
         for task_id, task_info in stats["tasks"].items():
-            # 检查是否是该用户的任务且未完成
             assignees = task_info.get("assignees", [])
             if user_id in assignees and not task_info.get("completed", False):
-                # 标记为已完成
+                tasks_to_complete.append((task_id, task_info))
+
+        # 第二步：逐个完成任务（本地+飞书API）
+        for task_id, task_info in tasks_to_complete:
+            # 调用飞书API将任务标记为完成
+            feishu_success = await complete_task_on_feishu(task_id)
+
+            if feishu_success:
+                # 飞书API成功后，更新本地状态
                 task_info["completed"] = True
                 task_info["completed_at"] = datetime.now(TZ).isoformat()
                 completed_count += 1
                 completed_titles.append(task_info.get("title", task_id))
-                logger.info(f"自动标记任务完成: {task_info.get('title')} (user: {user_id})")
+                logger.info(f"✅ 任务已完成（本地+飞书）: {task_info.get('title')} (user: {user_id})")
+            else:
+                # 飞书API失败，仍然更新本地状态（保证用户体验）
+                task_info["completed"] = True
+                task_info["completed_at"] = datetime.now(TZ).isoformat()
+                completed_count += 1
+                completed_titles.append(task_info.get("title", task_id))
+                logger.warning(f"⚠️ 任务本地已完成，但飞书API失败: {task_info.get('title')} (user: {user_id})")
 
         if completed_count > 0:
             # 更新统计数据
@@ -1130,7 +1297,31 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
             return True
 
         normalized = _sanitize_command_text(text)
+        normalized = _resolve_command_text_with_ai(text, normalized)
         logger.info("[DEBUG] Message from user %s: text=%r, normalized=%r", user_open_id, text, normalized)
+
+        # 我的任务 -> 只显示当前用户未完成任务
+        if normalized in {"我的任务", "我的待办", "我负责的任务", "my tasks", "my task", "mine"}:
+            if not user_open_id:
+                await reply_to_message(message_id, "无法识别您的飞书用户身份，请联系管理员检查事件配置。")
+                return True
+
+            tasks = [
+                task
+                for task in get_pending_tasks_detail()
+                if user_open_id in (task.get("assignees") or [])
+            ]
+            if not tasks:
+                await reply_to_message(message_id, "您当前没有未完成任务。")
+                return True
+
+            out = [f"📝 我的未完成任务（{len(tasks)}个）"]
+            for i, task in enumerate(tasks[:8], 1):
+                out.append(f"{i}. {task['title']}")
+            if len(tasks) > 8:
+                out.append(f"... 还有 {len(tasks) - 8} 个任务未显示")
+            await reply_to_message(message_id, "\n".join(out))
+            return True
 
         # 未完成/谁没交 → 若当月未创建任务则直接回复“当前没有任务”
         if normalized in {"未完成", "谁没交", "还有谁", "任务列表", "列表", "pending", "todo"}:
@@ -1275,9 +1466,9 @@ async def handle_message_event(event: Dict[str, Any]) -> bool:
         if normalized in {"已完成", "完成了", "完成", "我完成", "done", "我完成了", "标记完成", "提交了", "完成啦"}:
             logger.info("[DEBUG] '已完成' command matched! user_open_id=%s", user_open_id)
             if user_open_id:
-                # 标记该用户的所有未完成任务为已完成
+                # 标记该用户的所有未完成任务为已完成（本地+飞书API）
                 logger.info("[DEBUG] Calling mark_user_tasks_completed for user_open_id=%s", user_open_id)
-                completed_count, completed_titles = mark_user_tasks_completed(user_open_id)
+                completed_count, completed_titles = await mark_user_tasks_completed(user_open_id)
 
                 if completed_count > 0:
                     # 构建回复消息
@@ -1548,7 +1739,8 @@ async def create_tasks() -> bool:
 
                 # 计算截止时间（23号 23:59:59）
                 deadline = datetime.now(TZ).replace(day=23, hour=23, minute=59, second=59)
-                due_timestamp = int(deadline.timestamp())
+                # 飞书Task v2 API需要毫秒级时间戳（乘以1000）
+                due_timestamp = int(deadline.timestamp() * 1000)
 
                 # 准备任务成员（在创建时直接分配）
                 members_list = []
@@ -1583,7 +1775,8 @@ async def create_tasks() -> bool:
                         logger.info("✅ 任务分配成功: %s -> %s", task_title, assignees)
 
                     # 更新统计（使用真实的 task_guid）
-                    update_task_completion(task_guid, task_config['title'], assignees, False)
+                    update_task_completion(task_guid, task_config['title'], assignees, False,
+                                           task_type=task_config.get('task_type', '月报'))
                     success_count += 1
 
                 else:

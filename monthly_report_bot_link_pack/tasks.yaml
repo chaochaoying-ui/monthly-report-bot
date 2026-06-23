@@ -1,118 +1,330 @@
-# 月报资料提供目录 - 任务配置
-# 更新日期: 2025-11-18
-# 根据用户提供的图片更新任务和负责人对应关系
+# 月报、重大项目资料提供目录 - 任务配置
+# 更新日期: 2026-06-22
+# 来源: 《月报、重大项目资料提供目录.xlsx》截图（最终版）
+# task_type 取值: 月报 / 重大项目月报
 
-# ===== 一、技术部 =====
+# ===== 一、月报资料目录（共23条）=====
+
+# --- 技术部 ---
 - title: 月报-工程计划及执行情况
-  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
+  task_type: 月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-设计工作进展
+  task_type: 月报
   assignee_open_id: ou_07443a67428d8741eab5eac851b754b9  # 范明杰
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-本月其他工作进展-技术管理
-  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
+  task_type: 月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-- title: 月报-存在的问题及措施-土建设计
-  assignee_open_id: ou_07443a67428d8741eab5eac851b754b9  # 范明杰
-  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
-
-- title: 月报-存在的问题及措施-总进度滞后方面、各分部工程进度、开工累计产值计划偏差方面
-  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
+- title: 月报-存在的问题及措施-土建设计、总进度滞后方面、各分部工程进度、开工累计产值计划偏差方面
+  task_type: 月报
+  assignee_open_id:
+    - ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+    - ou_07443a67428d8741eab5eac851b754b9    # 范明杰
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-下月工作计划及安排-进度及产值方面
-  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
+  task_type: 月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-现场施工照片
+  task_type: 月报
   assignee_open_id: ou_df1bfcd8e72f347c19e127154e7e618b  # 袁龙
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 二、机电管理部 =====
+# --- 机电管理部 ---
 - title: 月报-设计工作进展情况-机电工程
+  task_type: 月报
   assignee_open_id: ou_66ef2e056d0425ac560717a8b80395c3  # 蒲星宇
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-采购工作进展情况-永久机电材料和成套设备采
-  assignee_open_id: ou_66ef2e056d0425ac560717a8b80395c3  # 蒲星宇
+  task_type: 月报
+  assignee_open_id: ou_22703f0c3bdb25b39de2b34d9605b8a9  # 齐书红
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 三、施工管理部 =====
+# --- 施工管理部 ---
 - title: 月报-存在的问题及措施-现场施工方面
-  assignee_open_id: ou_5199fde738bcaedd5fcf4555b0adf7a0  # 孙建敏
+  task_type: 月报
+  assignee_open_id: ou_ca6bebe2baa684e0a0267408f9f72ef4  # 季宗军
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-- title: 月报-下月工作计划及安排-进度及产值方面
-  assignee_open_id: ou_5199fde738bcaedd5fcf4555b0adf7a0  # 孙建敏
+- title: 月报-下月工作计划及安排-进度及产值方面（施工）
+  task_type: 月报
+  assignee_open_id: ou_ca6bebe2baa684e0a0267408f9f72ef4  # 季宗军
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 四、安质环部 =====
+# --- 安质环部 ---
 - title: 月报-本月其他工作进展-安质环管理
+  task_type: 月报
   assignee_open_id: ou_33d81ce8839d93132e4417530f60c4a9  # 高雅慧
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-下月工作计划及安排-安全、质量及环保方面
+  task_type: 月报
   assignee_open_id: ou_33d81ce8839d93132e4417530f60c4a9  # 高雅慧
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 六、设备物资部 =====
+# --- 设备物资部（六）---
 - title: 月报-项目主材当月出入库及库存情况
-  assignee_open_id: ou_f5338c49049621c36310e2215204d0be  # 景晓东
+  task_type: 月报
+  assignee_open_id: ou_473b647c1b9ec69a0dcac35bfc35a5a4  # 吴中甫
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 七、设备物资部 =====
+# --- 设备物资部（七）---
 - title: 月报-本月其他工作进展（设备管理）
+  task_type: 月报
   assignee_open_id: ou_50c492f1d2b2ee2107c4e28ab4416732  # 闵国政
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 八、行政部 =====
+# --- 行政部 ---
 - title: 月报-项目人员信息统计表
-  assignee_open_id: ou_2f93cb9407ca5a281a92d1f5a72fdf7b  # 唐进
+  task_type: 月报
+  assignee_open_id: ou_e32b70d3b2dcab3b77d043650f2ecbad  # 田致维
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-本月其他工作进展-项目部制度建设、劳务管理、公共关系建立及维护
+  task_type: 月报
   assignee_open_id: ou_d85dd7bb7625ab3e3f8b129e54934aea  # 何寨
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-总部监管意见的响应落实情况-工会补充协议
+  task_type: 月报
   assignee_open_id: ou_c9d7859417eb0344b310fcff095fa639  # 李洪蛟
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-- title: 协助做好建筑领导出访阿国其他工作
-  assignee_open_id: ou_c9d7859417eb0344b310fcff095fa639  # 李洪蛟
-  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
-
-# ===== 九、财务部 =====
+# --- 财务部 ---
 - title: 月报-"两金"情况-现金流情况、营业收入完成情况
+  task_type: 月报
   assignee_open_id: ou_3b14801caa065a0074c7d6db8603f288  # 袁阿虎
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-- title: 月报-"本月其他工作进展-税务管理
+- title: 月报-本月其他工作进展-税务管理
+  task_type: 月报
   assignee_open_id: ou_3b14801caa065a0074c7d6db8603f288  # 袁阿虎
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 十、商务部 =====
-- title: 月报-主合同备忘录MOU工作进展
-  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
-  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
-
+# --- 商务部（十）---
 - title: 月报-总部监管意见的响应落实情况-谅解备忘录相关事项
+  task_type: 月报
   assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 十一、商务部 =====
+# --- 商务部（十一）---
 - title: 月报-结算支付情况
+  task_type: 月报
   assignee_open_id: ou_17b6bee82dd946d92a322cc7dea40eb7  # 马富凡
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
-# ===== 十二、商务部 =====
+# --- 商务部（十二）---
 - title: 月报-采购执行情况部分
-  assignee_open_id: ou_9847326a1fea8db87079101775bd97a9  # 王冠群
+  task_type: 月报
+  assignee_open_id: ou_6c3e3989442de940036939a732f0e658  # 张随
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-分包合同结算支付情况
-  assignee_open_id: ou_9847326a1fea8db87079101775bd97a9  # 王冠群
+  task_type: 月报
+  assignee_open_id: ou_6c3e3989442de940036939a732f0e658  # 张随
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+
+# ===== 二、公司重大项目管理月报（共37条）=====
+
+# --- 商务部 ---
+- title: 一、工程概况-（一）项目简介
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 一、工程概况-（二）项目责任目标
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 二、本月重要事件及亮点
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 四、项目责任制管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 六、经营管理情况-（一）产值统计
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 六、经营管理情况-（二）合同情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 六、经营管理情况-（三）对业主签证、变更、索赔及认质认价等工作开展情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 六、经营管理情况-（四）合同边界条件及外部重大变化情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 六、经营管理情况-（五）项目利润预测情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十一、分包管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_6c3e3989442de940036939a732f0e658  # 张随
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十四、合作方（联合体成员）履约情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十五、项目存在主要问题、拟采取的措施及建议-(2)采购方面-主要针对分包采购存在的问题
+  task_type: 重大项目月报
+  assignee_open_id: ou_6c3e3989442de940036939a732f0e658  # 张随
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十六、下月度主要工作计划-（二）产值计划
+  task_type: 重大项目月报
+  assignee_open_id: ou_5ca06c62f2854b2bc0947e83fc85bf96  # 屈超
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十六、下月度主要工作计划-（一）重大事项-商务方面
+  task_type: 重大项目月报
+  assignee_open_id: ou_0bbab538833c35081e8f5c3ef213e17e  # 熊黄平
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 技术部 ---
+- title: 三、项目策划管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 五、进度管理情况-（一）总进度计划编制及审批情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 五、进度管理情况-（四）工程形象进度、重大节点完成及偏差情况（当月、年累、开累）
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 五、进度管理情况-（五）偏差原因及纠偏措施
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 九、设计及技术管理情况-（一）设计及图纸供应（当月、累计）情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_07443a67428d8741eab5eac851b754b9  # 范明杰
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 九、设计及技术管理情况-（二）设计变更及优化情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_07443a67428d8741eab5eac851b754b9  # 范明杰
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 九、设计及技术管理情况-（三）施工组织设计、施工方案编制、交底及执行情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 九、设计及技术管理情况-（四）危大工程管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 九、设计及技术管理情况-（五）"五新"技术应用情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十五、项目存在主要问题、拟采取的措施及建议-(1)土建设计
+  task_type: 重大项目月报
+  assignee_open_id: ou_07443a67428d8741eab5eac851b754b9  # 范明杰
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十六、下月度主要工作计划-（一）重大事项-生产技术方面
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十六、下月度主要工作计划-（三）主要节点及形象进度计划
+  task_type: 重大项目月报
+  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十七、工程照片
+  task_type: 重大项目月报
+  assignee_open_id: ou_df1bfcd8e72f347c19e127154e7e618b  # 袁龙
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 施工管理部 ---
+- title: 十五、项目存在主要问题、拟采取的措施及建议-(3)现场施工方面
+  task_type: 重大项目月报
+  assignee_open_id: ou_ca6bebe2baa684e0a0267408f9f72ef4  # 季宗军
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 安质环部 ---
+- title: 十、QHSE管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_33d81ce8839d93132e4417530f60c4a9  # 高雅慧
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 设备物资部 ---
+- title: 五、进度管理情况-（三）主要设备、物资采购进度（当月、开累）-1.货物类采购
+  task_type: 重大项目月报
+  assignee_open_id: ou_f5338c49049621c36310e2215204d0be  # 景晓东
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十五、项目存在主要问题、拟采取的措施及建议-(2)采购方面-主要针对物资采购存在的问题
+  task_type: 重大项目月报
+  assignee_open_id: ou_f5338c49049621c36310e2215204d0be  # 景晓东
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 机电部 ---
+- title: 五、进度管理情况-（三）主要设备、物资采购进度（当月、开累）-2.永久机电材料和成套设备采购
+  task_type: 重大项目月报
+  assignee_open_id: ou_22703f0c3bdb25b39de2b34d9605b8a9  # 齐书红
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 行政部 ---
+- title: 一、工程概况-（三）项目部组织机构图及主要管理人员名单
+  task_type: 重大项目月报
+  assignee_open_id: ou_e32b70d3b2dcab3b77d043650f2ecbad  # 田致维
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 五、进度管理情况-（二）配合征地拆迁进度
+  task_type: 重大项目月报
+  assignee_open_id: ou_c9d7859417eb0344b310fcff095fa639  # 李洪蛟
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 八、资源配置情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_e32b70d3b2dcab3b77d043650f2ecbad  # 田致维
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+# --- 财务部 ---
+- title: 七、资金管理情况
+  task_type: 重大项目月报
+  assignee_open_id: ou_3b14801caa065a0074c7d6db8603f288  # 袁阿虎
+  doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
+
+- title: 十六、下月度主要工作计划-（四）资金计划
+  task_type: 重大项目月报
+  assignee_open_id: ou_3b14801caa065a0074c7d6db8603f288  # 袁阿虎
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd

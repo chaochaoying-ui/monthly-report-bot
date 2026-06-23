@@ -87,7 +87,7 @@ def save_created_tasks(created_tasks):
             json.dump(created_tasks, f, indent=2, ensure_ascii=False)
     except Exception as e:
         print(f"❌ 保存created_tasks失败: {e}")
-def update_task_completion(task_id: str, title: str, assignees: list, completed: bool):
+def update_task_completion(task_id: str, title: str, assignees: list, completed: bool, task_type: str = "月报"):
     """更新任务完成状态"""
     try:
         # 读取现有数据
@@ -108,6 +108,7 @@ def update_task_completion(task_id: str, title: str, assignees: list, completed:
         stats["tasks"][task_id] = {
             "title": title,
             "assignees": assignees,
+            "task_type": task_type,
             "completed": completed,
             "completed_at": datetime.now(TZ).isoformat() if completed else None
         }
@@ -153,8 +154,10 @@ async def create_tasks():
 
     # 计算截止时间（23号 23:59:59）
     deadline = datetime.now(TZ).replace(day=23, hour=23, minute=59, second=59)
-    due_timestamp = int(deadline.timestamp())
+    # 飞书API需要毫秒级时间戳（乘以1000）
+    due_timestamp = int(deadline.timestamp() * 1000)
     print(f"⏰ 截止时间: {deadline.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"⏰ 时间戳（毫秒）: {due_timestamp}")
     print()
 
     success_count = 0
@@ -216,7 +219,8 @@ async def create_tasks():
                 print(f"     GUID: {task_guid}")
 
                 # 更新统计（使用真实的 task_guid）
-                update_task_completion(task_guid, task_config['title'], assignees, False)
+                update_task_completion(task_guid, task_config['title'], assignees, False,
+                                       task_type=task_config.get('task_type', '月报'))
                 success_count += 1
 
             else:
