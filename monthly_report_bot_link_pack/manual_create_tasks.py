@@ -280,11 +280,13 @@ async def main():
                 print("❌ 操作已取消")
                 return
 
-            # 备份
+            # 备份并清空旧数据，确保重建从零开始
             import shutil
             backup_file = f"{TASK_STATS_FILE}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             shutil.copy(TASK_STATS_FILE, backup_file)
             print(f"✅ 已备份到: {backup_file}")
+            os.remove(TASK_STATS_FILE)
+            print(f"✅ 已清空旧任务数据，重新创建")
             print()
 
     # 创建任务

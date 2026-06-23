@@ -457,7 +457,7 @@ USER_ID_MAPPING = {
     "ou_5199fde738bcaedd5fcf4555b0adf7a0": "孙建敏",
     "ou_22703f0c3bdb25b39de2b34d9605b8a9": "齐书红",
     "ou_5b1673a24607bec4fbcbc74b8572e774": "杨强",
-    "ou_b96c7ed4a604dc049569102d01c6ec26d": "刘野",  # 修正ID 2025-03
+    "ou_b96c7cd4a604dc049569102d01c6c26d": "刘野",  # 修正ID 2025-03
     "ou_5ad999af75b598dac3a05c773800d2bc": "孟洪武",
     "ou_1e008e4217c7283055ce817d3cdf9682": "王明毅",
     "ou_9be94cf6a100dbaf2030070c184050ca": "王紫阳",

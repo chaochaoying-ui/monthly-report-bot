@@ -8,7 +8,7 @@
 # --- 技术部 ---
 - title: 月报-工程计划及执行情况
   task_type: 月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-设计工作进展
@@ -18,19 +18,19 @@
 
 - title: 月报-本月其他工作进展-技术管理
   task_type: 月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-存在的问题及措施-土建设计、总进度滞后方面、各分部工程进度、开工累计产值计划偏差方面
   task_type: 月报
   assignee_open_id:
-    - ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+    - ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
     - ou_07443a67428d8741eab5eac851b754b9    # 范明杰
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-下月工作计划及安排-进度及产值方面
   task_type: 月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 月报-现场施工照片
@@ -210,22 +210,22 @@
 # --- 技术部 ---
 - title: 三、项目策划管理情况
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 五、进度管理情况-（一）总进度计划编制及审批情况
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 五、进度管理情况-（四）工程形象进度、重大节点完成及偏差情况（当月、年累、开累）
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 五、进度管理情况-（五）偏差原因及纠偏措施
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 九、设计及技术管理情况-（一）设计及图纸供应（当月、累计）情况
@@ -240,17 +240,17 @@
 
 - title: 九、设计及技术管理情况-（三）施工组织设计、施工方案编制、交底及执行情况
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 九、设计及技术管理情况-（四）危大工程管理情况
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 九、设计及技术管理情况-（五）"五新"技术应用情况
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 十五、项目存在主要问题、拟采取的措施及建议-(1)土建设计
@@ -260,12 +260,12 @@
 
 - title: 十六、下月度主要工作计划-（一）重大事项-生产技术方面
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 十六、下月度主要工作计划-（三）主要节点及形象进度计划
   task_type: 重大项目月报
-  assignee_open_id: ou_b96c7ed4a604dc049569102d01c6ec26d  # 刘野
+  assignee_open_id: ou_b96c7cd4a604dc049569102d01c6c26d  # 刘野
   doc_url: https://be9bhmcgo2.feishu.cn/drive/folder/OJP5fbjlSlwrf6dTF5acnRw3nzd
 
 - title: 十七、工程照片
